@@ -1,131 +1,152 @@
 # agent-protocol
 
-多种 coding agent 之间的标准化协作协议。
+Codex、Claude Code、Mastra Code 之间的项目级个人协作协议。
 
-## 安装
+## 目标
+
+这个仓库提供一套 Planner / Executor 协作协议，让不同 coding agent 在同一个项目里通过本地任务文件交接工作。
+
+它不会修改团队共享的 `AGENTS.md` 或 `CLAUDE.md`，也不会要求把个人配置提交到 GitHub。
+
+## 安装协议
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
 ```
 
-这会更新：
+这只会安装或更新：
 
-- `~/.agent-protocol/`
+- `~/.agent-protocol/PROTOCOL.md`
+- `~/.agent-protocol/roles/planner.md`
+- `~/.agent-protocol/roles/executor.md`
+- `~/.agent-protocol/schema/tasks.schema.json`
+- `~/.agent-protocol/init.sh`
 
-不会修改全局 agent 规则，也不会修改任何项目仓库里的团队配置文件。
+## 安装 Skill
+
+把本仓库的 skill 安装到你使用的 agent 中：
+
+```text
+skills/agent-protocol/SKILL.md
+```
+
+脚本不负责安装 skill，因为不同 agent 的 skill 安装方式不同。安装后，agent 会知道如何按本协议选择 Planner / Executor 角色、读取项目配置、读写 task。
 
 ## 项目级个人配置
 
-如果某个项目要使用自己的 agent-protocol 设置，只在该项目里创建个人私有配置：
+在具体项目中运行：
 
 ```bash
 cd your-project
-~/.agent-protocol/init.sh --project
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
 ```
 
-这只会创建或保留：
+这会创建或更新：
 
-- `AGENTS.override.md`（Codex 项目级个人配置）
-- `CLAUDE.local.md`（Claude Code 项目级个人配置）
-- `.mastracode/AGENTS.md`（Mastra Code 项目级个人配置）
-- `opencode.json`（opencode 项目级个人配置；仅当文件不存在时创建）
-- `.agent-memory/agent-protocol.md`
-- `.agent-memory/tasks.json`
-- `.git/info/exclude` 中的本地忽略规则
+- `AGENTS.override.md`：Codex 项目级个人入口
+- `CLAUDE.local.md`：Claude Code 项目级个人入口
+- `.mastracode/AGENTS.md`：Mastra Code 项目级个人入口
+- `.agent-memory/agent-protocol.md`：项目级个人协议配置
+- `.agent-memory/tasks.json`：Planner / Executor 共享任务状态
+- `.git/info/exclude`：本地忽略上述个人配置和状态文件
 
-不会写入项目根目录的 `AGENTS.md` 或 `CLAUDE.md`。
+不会写入项目根目录的团队共享 `AGENTS.md` 或 `CLAUDE.md`。
 
-各 agent 的项目级个人配置入口：
+## 角色分工
 
-- Codex：`AGENTS.override.md`
-- Claude Code：`CLAUDE.local.md`
-- opencode：`opencode.json` 的 `instructions`
-- Mastra Code：`.mastracode/AGENTS.md`
+Planner 负责：
 
-Mastra Code 的读取顺序是项目根目录 `AGENTS.md` / `CLAUDE.md`，然后 `.claude/AGENTS.md` / `.claude/CLAUDE.md`，最后 `.mastracode/AGENTS.md` / `.mastracode/CLAUDE.md`。如果团队仓库根目录已经有 `AGENTS.md` 或 `CLAUDE.md`，Mastra 会先读取团队文件；这是 Mastra Code 的官方 lookup order 限制。
+- 分析需求
+- 设计方案
+- review 代码
+- 追加 pending task 到 `.agent-memory/tasks.json`
+- 验收 Executor 完成的任务并改为 `verified`
 
-不同项目可以使用不同的 agent：
+Executor 负责：
 
-```bash
-cd project-a
-~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent opencode
+- 读取 `.agent-memory/tasks.json`
+- 认领 `pending` task 并改为 `in_progress`
+- 按 `spec` 实现或修复
+- 完成后改为 `done`
+- 填写 `implementation_notes`
 
-cd ../project-b
-~/.agent-protocol/init.sh --project --planner-agent opencode --executor-agent opencode
-```
+## 推荐使用方式
 
-## 更新
-
-如果 `agent-protocol` 仓库更新了，先更新本机协议：
+1. 安装协议：
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
 ```
 
-如果项目已经有 `.agent-memory/agent-protocol.md` 和 `.agent-memory/tasks.json`，不需要修改团队文件。需要时可以重新执行：
+2. 给 Codex、Claude Code、Mastra Code 分别安装 `skills/agent-protocol/SKILL.md`。
+
+3. 在项目里初始化个人配置：
 
 ```bash
 cd your-project
-~/.agent-protocol/init.sh --project
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
 ```
 
-如果要锁定到某个版本：
+4. 让 Planner 创建任务：
 
-```bash
-~/.agent-protocol/init.sh --version v1.0
+```text
+按 agent-protocol 作为 Planner 分析这个需求，并创建 task。
 ```
 
-## 切换 Agent 扮演者
+5. 让 Executor 执行任务：
 
-如果 Codex 或 Claude Code 暂时不可用，可以把 Planner / Executor 切换给其他 agent，例如 opencode：
-
-```bash
-~/.agent-protocol/init.sh --planner-agent opencode --executor-agent opencode
+```text
+按 agent-protocol 作为 Executor 处理 pending task。
 ```
 
-这条命令会同时更新：
+6. 让 Planner 验收：
 
-- `~/.agent-protocol/PROTOCOL.md` 中的角色分工名称
-- `~/.agent-protocol/roles/planner.md` 中的 Planner 扮演者
-- `~/.agent-protocol/roles/executor.md` 中的 Executor 扮演者
-
-也可以只替换其中一个角色：
-
-```bash
-~/.agent-protocol/init.sh --planner-agent opencode
-~/.agent-protocol/init.sh --executor-agent opencode
+```text
+按 agent-protocol 作为 Planner 验收 done task。
 ```
 
-## 工作原理
+## Agent 入口文件
 
-- Planner（默认 Codex，可切换）：分析、设计、Review，输出任务到 `.agent-memory/tasks.json`
-- Executor（默认 Claude Code，可切换）：读取任务，实现，更新状态
-- `PROTOCOL.md` 是唯一维护协议约定的地方
-- `roles/planner.md` 和 `roles/executor.md` 分别定义两个 agent 的职责
-- 各 agent 通过项目级个人入口读取 `.agent-memory/agent-protocol.md`；这些入口文件通过 `.git/info/exclude` 保持不提交
+Codex 读取：
+
+```text
+AGENTS.override.md
+```
+
+Claude Code 读取：
+
+```text
+CLAUDE.local.md
+```
+
+Mastra Code 读取：
+
+```text
+.mastracode/AGENTS.md
+```
+
+注意：Mastra Code 的 lookup order 是项目根目录 `AGENTS.md` / `CLAUDE.md`，然后 `.claude/AGENTS.md` / `.claude/CLAUDE.md`，最后 `.mastracode/AGENTS.md` / `.mastracode/CLAUDE.md`。如果团队仓库根目录已有 `AGENTS.md` 或 `CLAUDE.md`，Mastra 会先读取团队文件，这是 Mastra Code 的官方行为。
 
 ## 文件说明
 
-- `README.md`：项目说明和快速开始
-- `PROTOCOL.md`：Agent 协作协议正文
-- `roles/planner.md`：Codex/Planner 角色说明
-- `roles/executor.md`：Claude Code/Executor 角色说明
+- `PROTOCOL.md`：协议正文
+- `roles/planner.md`：Planner 角色说明
+- `roles/executor.md`：Executor 角色说明
 - `schema/tasks.schema.json`：任务文件 JSON Schema
-- `init.sh`：安装协议和初始化项目的脚本
-- `skills/agent-protocol/SKILL.md`：可按需安装到支持 skill 的 agent 中
+- `init.sh`：安装协议和初始化项目级个人配置
+- `skills/agent-protocol/SKILL.md`：给各 agent 安装的 skill
 
-## 版本说明
+## 版本
 
-默认安装 `main` 分支上的最新协议：
-
-```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
-```
-
-新项目可以锁定到指定版本：
+指定版本安装：
 
 ```bash
-~/.agent-protocol/init.sh --version v1.0
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --version v1.0
 ```
 
-更新本地协议时，重新执行安装命令即可覆盖 `~/.agent-protocol` 下的协议文件。
+指定项目角色：
+
+```bash
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent "Claude Code"
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
+```

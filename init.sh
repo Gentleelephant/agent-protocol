@@ -5,7 +5,7 @@ set -euo pipefail
 #   安装/更新协议: curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
 #   初始化/更新项目级个人配置: ~/.agent-protocol/init.sh --project
 #   指定版本:             ~/.agent-protocol/init.sh --version v1.0
-#   指定扮演者:           ~/.agent-protocol/init.sh --planner-agent opencode --executor-agent opencode
+#   指定扮演者:           ~/.agent-protocol/init.sh --planner-agent Codex --executor-agent mastracode
 
 REPO_RAW="https://raw.githubusercontent.com/Gentleelephant/agent-protocol"
 VERSION="main"
@@ -211,20 +211,6 @@ EOF
   mkdir -p .mastracode
   printf "%s\n" "$entry_content" > .mastracode/AGENTS.md
 
-  if [ ! -f "opencode.json" ]; then
-    cat > opencode.json << EOF
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "instructions": [".agent-memory/agent-protocol.md"]
-}
-EOF
-    opencode_message="opencode.json 已创建"
-  elif grep -Fq ".agent-memory/agent-protocol.md" opencode.json; then
-    opencode_message="opencode.json 已包含 agent-protocol instructions"
-  else
-    opencode_message="opencode.json 已存在，未修改；请手动加入 instructions: [\".agent-memory/agent-protocol.md\"]"
-  fi
-
   if [ ! -f ".agent-memory/tasks.json" ]; then
     printf '{"tasks": []}\n' > .agent-memory/tasks.json
     tasks_message=".agent-memory/tasks.json 已创建"
@@ -237,9 +223,6 @@ EOF
     add_git_exclude "AGENTS.override.md"
     add_git_exclude "CLAUDE.local.md"
     add_git_exclude ".mastracode/AGENTS.md"
-    if [ "$opencode_message" = "opencode.json 已创建" ]; then
-      add_git_exclude "opencode.json"
-    fi
     exclude_message=".git/info/exclude 已更新"
   else
     exclude_message=".git/info/exclude 未修改"
@@ -249,7 +232,6 @@ EOF
   echo "  - AGENTS.override.md 已更新（Codex）"
   echo "  - CLAUDE.local.md 已更新（Claude Code）"
   echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
-  echo "  - $opencode_message"
   echo "  - $project_config_message"
   echo "  - $tasks_message"
   echo "  - $exclude_message"

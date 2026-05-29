@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-description: Use when the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor agents across coding agents using project-level personal agent-protocol configuration.
+description: Use when the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor work across Codex, Claude Code, and Mastra Code using project-level personal agent-protocol configuration.
 ---
 
 # Agent Protocol
@@ -24,8 +24,9 @@ Do not require team-shared project `AGENTS.md` or `CLAUDE.md`. This protocol is 
 
 - `AGENTS.override.md` for Codex
 - `CLAUDE.local.md` for Claude Code
-- `opencode.json` with `instructions: [".agent-memory/agent-protocol.md"]` for opencode
 - `.mastracode/AGENTS.md` for Mastra Code
+
+Each agent should have this skill installed separately. The skill defines the shared workflow; the project entry file tells the specific agent where to read the project-level personal protocol config.
 
 If the project has no task state and the user wants protocol handoff, tell the user to run:
 
