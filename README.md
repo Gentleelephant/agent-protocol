@@ -7,19 +7,20 @@ Claude Code、Mastra Code 之间的项目级个人协作协议。
 ```text
 agent-protocol/
 ├── skills/
-│   ├── agent-protocol/          # 共享协议 skill
-│   │   ├── SKILL.md             # 协议唯一来源（工作流、角色门禁、任务结构）
-│   │   ├── scripts/init.sh
-│   │   └── references/
-│   ├── ap:init/SKILL.md         # Claude Code 命令 skill → /ap:init
-│   ├── ap:review/SKILL.md       # → /ap:review
-│   ├── ...
-│   └── ap:whoami/SKILL.md
+│   └── agent-protocol/          # 共享协议 skill
+│       ├── SKILL.md             # 协议唯一来源（工作流、角色门禁、任务结构）
+│       ├── scripts/init.sh
+│       └── references/
 ├── adapters/
+│   ├── claude/
+│   │   └── commands/
+│   │       ├── ap:done.md       # → /ap:done
+│   │       ├── ap:review.md     # → /ap:review
+│   │       └── ...
 │   └── mastracode/
 │       └── commands/
-│           └── ap/              # Mastra Code 命令 → /ap:<file>
-│               ├── init.md
+│           └── ap/              # → /ap:<file>
+│               ├── done.md
 │               ├── review.md
 │               └── ...
 ├── scripts/install.sh           # 安装 /ap: 命令适配层（skill 由用户自行管理）
@@ -30,8 +31,8 @@ agent-protocol/
 
 `skills/agent-protocol/SKILL.md` 是协议唯一来源。命令适配层只做一件事：把平台原生 slash command 映射到同一个 skill 工作流。
 
-- Claude Code：14 个独立 skill（`skills/ap:*/SKILL.md`），安装到 `~/.claude/skills/` 后暴露为 `/ap:xxx`。
-- Mastra Code：14 个 custom slash command（`adapters/mastracode/commands/ap/*.md`），安装后为 `/ap:xxx`。
+- Claude Code：14 个 command 文件（`adapters/claude/commands/ap:*.md`），安装到 `~/.claude/commands/` 后暴露为 `/ap:xxx`。
+- Mastra Code：14 个 command 文件（`adapters/mastracode/commands/ap/*.md`），安装到 `.mastracode/commands/ap/` 后暴露为 `/ap:xxx`。
 - `/ap:init` 只初始化项目级个人配置和任务状态，不负责安装命令。
 
 ## 安装
@@ -70,12 +71,12 @@ scripts/install.sh --agent mastracode --scope project
 安装脚本会创建：
 
 ```text
-~/.claude/skills/ap:init/
-~/.claude/skills/ap:review/
+~/.claude/commands/ap:init.md
+~/.claude/commands/ap:review.md
 ...
 ```
 
-项目级安装时对应目录是 `.claude/skills/`。Claude Code 当前推荐用 skills 创建自定义命令；`ap:init` 这样的命令 skill 直接暴露为 `/ap:init`。
+项目级安装时对应目录是 `.claude/commands/`。
 
 ### Mastra Code
 

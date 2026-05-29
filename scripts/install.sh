@@ -94,20 +94,20 @@ install_claude() {
     base=".claude"
   fi
 
-  mkdir -p "$base/skills"
+  mkdir -p "$base/commands"
   local found=0
-  for command_skill in "$REPO_ROOT"/skills/ap:*; do
-    [ -d "$command_skill" ] || continue
+  for cmd in "$REPO_ROOT"/adapters/claude/commands/ap:*.md; do
+    [ -f "$cmd" ] || continue
     found=1
-    copy_dir "$command_skill" "$base/skills/$(basename "$command_skill")"
+    cp "$cmd" "$base/commands/$(basename "$cmd")"
   done
   if [ "$found" -eq 0 ]; then
-    echo "error: no /ap: command skills found at skills/ap:*" >&2
+    echo "error: no /ap: commands found at adapters/claude/commands/ap:*.md" >&2
     exit 1
   fi
 
-  echo "✓ Claude Code /ap: commands installed to $base/skills"
-  echo "  - commands: $base/skills/ap:*"
+  echo "✓ Claude Code /ap: commands installed to $base/commands"
+  echo "  - commands: $base/commands/ap:*.md"
 }
 
 install_mastracode() {
