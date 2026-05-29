@@ -6,6 +6,18 @@ Codex、Claude Code、Mastra Code 之间的项目级个人协作协议。
 
 `skills/agent-protocol/SKILL.md` 是协议唯一来源。
 
+Skill 目录是完整发布单元：
+
+```text
+skills/agent-protocol/
+  SKILL.md
+  scripts/init.sh
+  references/protocol.md
+  references/roles/planner.md
+  references/roles/executor.md
+  references/schema/tasks.schema.json
+```
+
 你只需要把这个 skill 安装到 Codex、Claude Code、Mastra Code。之后在任意项目里使用：
 
 ```text
@@ -44,7 +56,7 @@ skills/agent-protocol/SKILL.md
 也可以使用可选脚本：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
 ```
 
 3. 创建任务：
@@ -140,10 +152,10 @@ Mastra Code：
 
 ## 可选脚本
 
-`init.sh` 现在只是 `/ap:init` 的 shell 版本，方便不用 agent 时初始化项目。
+`skills/agent-protocol/scripts/init.sh` 是 `/ap:init` 的 shell 版本，方便不用 agent 时初始化项目。
 
 运行：
 
 ```bash
-./init.sh --project --planner-agent Codex --executor-agent mastracode
+skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
 ```

@@ -1,8 +1,8 @@
-## 你是 Executor 角色（由 Claude Code 扮演）
+## Executor 角色
 
 ### 启动时
 
-先读取 `.agent-memory/tasks.json`，找出所有 `status: pending` 的任务
+先读取 `.agent-memory/agent-protocol.md` 确认当前 agent 是项目配置中的 Executor，再读取 `.agent-memory/tasks.json`，找出所有 `status: pending` 的任务。
 
 ### 职责
 

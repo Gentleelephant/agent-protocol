@@ -1,13 +1,19 @@
-# Agent 协作协议 v1.0
+# Agent Protocol Reference
 
 ## 角色分工
 
-- **Planner**（默认 Codex，可配置）：负责分析、设计、review，输出任务
-- **Executor**（默认 Claude Code，可配置）：负责实现、修复，更新任务状态
+- **Planner**：负责分析、设计、review、创建 pending task、验收 done task。
+- **Executor**：负责认领 pending task、实现或修复、更新任务状态。
 
 ## 共享记忆位置
 
 项目根目录下的 `.agent-memory/tasks.json`
+
+项目角色绑定位置：
+
+```text
+.agent-memory/agent-protocol.md
+```
 
 ## 任务类型
 
@@ -44,3 +50,5 @@ pending → in_progress → done → verified
 - Planner 只写 pending 状态，不修改 Executor 的字段
 - Executor 只改 status / implementation_notes，不修改 spec
 - 追加任务，不覆盖整个文件
+- 验收通过后只有 Planner 可以把 done 改为 verified
+- 项目级个人配置不提交到团队仓库

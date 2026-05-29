@@ -9,7 +9,13 @@ Use this skill to reduce friction when working with project-level personal `agen
 
 ## Source Of Truth
 
-The installed `agent-protocol` skill is the protocol source of truth.
+The installed `agent-protocol` skill directory is the protocol source of truth. `SKILL.md` is the main workflow. Supporting details live next to it:
+
+- `references/protocol.md`
+- `references/roles/planner.md`
+- `references/roles/executor.md`
+- `references/schema/tasks.schema.json`
+- `scripts/init.sh`
 
 Use project-local private files for per-project behavior and task state:
 
@@ -27,7 +33,7 @@ Each agent should have this skill installed separately. The skill defines the sh
 If the project has no task state and the user wants protocol handoff, run `/ap:init` or tell the user to run:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --project
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project
 ```
 
 ## Role Selection

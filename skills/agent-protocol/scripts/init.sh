@@ -3,9 +3,9 @@ set -euo pipefail
 
 # 用法:
 #   初始化/更新当前项目级个人配置:
-#     ./init.sh --project --planner-agent Codex --executor-agent mastracode
+#     skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
 #   通过远端脚本运行:
-#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
+#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
 
 PROJECT_MODE=0
 PLANNER_AGENT="Codex"
@@ -126,7 +126,7 @@ Any-role：
 - Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
 - 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
 - \`/ap:switch\` 不能绕过项目角色绑定。它只改变当前会话的解释视角，不能让非绑定 agent 执行副作用命令。
-- 如需修改项目角色绑定，重新运行：\`/ap:init planner=<agent> executor=<agent>\` 或 \`./init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
+- 如需修改项目角色绑定，重新运行：\`/ap:init planner=<agent> executor=<agent>\` 或 \`skills/agent-protocol/scripts/init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
 
 ## 项目规则
 
