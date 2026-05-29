@@ -38,14 +38,22 @@ If the project has no task state and the user wants protocol handoff, tell the u
 
 Choose the role from the user's intent:
 
-- Planner: analysis, design, decomposition, review, architecture decisions, creating work for another agent.
-- Executor: implementation, bug fixing, tests, applying an existing pending task.
+- Planner: review, code audit, issue finding, analysis, design, decomposition, architecture decisions, creating work for another agent.
+- Executor: processing pending tasks, implementing an existing task, fixing an assigned task, testing a claimed task.
+
+Default trigger rules:
+
+- User says review, audit, inspect, check code, find bugs, security issue, performance issue, design issue: act as Planner and create pending tasks.
+- User says plan, design, break down, analyze requirement, architecture decision: act as Planner and create feature or design tasks.
+- User says process pending task, implement task, fix task, continue Executor work: act as Executor and update task state.
+- User says verify, validate, review done task, accept done task: act as Planner and mark valid done tasks as verified.
+- User explicitly says directly implement, directly edit code, do not create tasks, or no protocol: follow normal coding behavior for that request.
 
 If the user asks for planning, review, task creation, or handoff, do not edit production code. Act as Planner and append tasks.
 
 If the user asks to implement pending tasks or continue executor work, act as Executor.
 
-If the user asks to directly implement a feature and does not mention protocol/task handoff, follow normal coding behavior unless personal instructions explicitly require protocol workflow.
+If the user asks to directly implement a feature and does not mention protocol/task handoff, follow normal coding behavior unless project-level personal instructions explicitly require protocol workflow.
 
 ## Planner Workflow
 
@@ -109,5 +117,7 @@ Use this shape for new tasks:
 When Planner creates tasks, summarize the task ids and titles.
 
 When Executor completes tasks, summarize changed files, verification, and task statuses.
+
+Do not require the user to say "use agent-protocol" or "act as Planner/Executor" when the intent clearly matches the default trigger rules.
 
 Keep the protocol file as the shared state; do not rely on conversation memory for handoff-critical details.

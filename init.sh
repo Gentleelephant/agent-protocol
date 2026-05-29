@@ -184,9 +184,18 @@ init_project() {
 3. Executor 行为读取 \`$PROTOCOL_DIR/roles/executor.md\`
 4. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
 
+## 默认触发规则
+
+- 用户说 review、审查、检查代码、找问题、安全问题、性能问题、设计问题时，默认进入 Planner：分析后把发现的问题追加为 pending task。
+- 用户说规划、设计方案、拆任务、需求分析、架构决策时，默认进入 Planner：追加 feature 或 design task。
+- 用户说处理 pending task、执行任务、实现 task、修复 task、继续 Executor 工作时，默认进入 Executor：认领 pending task，完成后改为 done。
+- 用户说验收、verify、检查 done task 时，默认进入 Planner：验证后把 done task 改为 verified。
+- 只有用户明确要求“直接实现”、“直接修改代码”、“不要创建 task”时，才跳过 Planner 创建 task 的默认行为。
+
 ## 项目规则
 
 - 不要修改项目根目录的 \`AGENTS.md\` 或 \`CLAUDE.md\` 来启用本协议
+- 不需要用户显式说“按 agent-protocol”或“作为 Planner/Executor”；根据默认触发规则自动选择角色
 - Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
 - Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
 - \`.agent-memory/\` 是个人本地状态目录，应保持不提交
@@ -199,6 +208,15 @@ EOF
 这是当前项目的个人私有配置入口，不需要提交到团队仓库。
 
 请先读取 \`.agent-memory/agent-protocol.md\`，再按其中的读取顺序和角色规则执行。
+
+默认行为：
+
+- review / 审查 / 检查代码 / 找问题 => Planner，创建 pending task
+- 规划 / 设计 / 拆任务 / 需求分析 => Planner，创建 pending task
+- 处理 pending task / 实现 task / 修复 task => Executor，更新 task 状态
+- 验收 / verify done task => Planner，改为 verified
+
+用户不需要显式说“按 agent-protocol”或“作为 Planner/Executor”。
 
 如果需要协议正文或角色说明：
 

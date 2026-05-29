@@ -87,23 +87,34 @@ cd your-project
 ~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
 ```
 
-4. 让 Planner 创建任务：
+4. 让 Planner 创建任务。安装 skill 和项目入口后，不需要显式说“按 agent-protocol”，可以直接说：
 
 ```text
-按 agent-protocol 作为 Planner 分析这个需求，并创建 task。
+review 当前代码
+规划这个需求
+把这个需求拆成任务
 ```
+
+这些会默认触发 Planner，并把结果写入 `.agent-memory/tasks.json`。
 
 5. 让 Executor 执行任务：
 
 ```text
-按 agent-protocol 作为 Executor 处理 pending task。
+处理 pending task
+实现 task-001
+继续 Executor 工作
 ```
+
+这些会默认触发 Executor，认领任务并更新状态。
 
 6. 让 Planner 验收：
 
 ```text
-按 agent-protocol 作为 Planner 验收 done task。
+验收 done task
+verify task-001
 ```
+
+这些会默认触发 Planner 验收，并把通过的任务改为 `verified`。
 
 ## Agent 入口文件
 
