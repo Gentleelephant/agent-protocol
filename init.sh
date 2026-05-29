@@ -68,6 +68,7 @@ install_protocol() {
   echo "  - Planner: $PLANNER_AGENT"
   echo "  - Executor: $EXECUTOR_AGENT"
   echo "✓ 个人级规则已更新"
+  echo "  - ~/.codex/AGENTS.md"
   echo "  - ~/.claude/CLAUDE.md"
   echo "  - ~/.config/opencode/AGENTS.md"
 }
@@ -219,6 +220,7 @@ write_personal_configs() {
 - Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
 - 不要依赖项目根目录的 AGENTS.md / CLAUDE.md 来启用本协议"
 
+  write_managed_block "$HOME/.codex/AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
   write_managed_block "$HOME/.claude/CLAUDE.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
   write_managed_block "$HOME/.config/opencode/AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
 }

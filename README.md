@@ -11,6 +11,7 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/i
 这会更新：
 
 - `~/.agent-protocol/`
+- `~/.codex/AGENTS.md`
 - `~/.claude/CLAUDE.md`
 - `~/.config/opencode/AGENTS.md`
 
@@ -66,6 +67,7 @@ cd your-project
 - `~/.agent-protocol/PROTOCOL.md` 中的角色分工名称
 - `~/.agent-protocol/roles/planner.md` 中的 Planner 扮演者
 - `~/.agent-protocol/roles/executor.md` 中的 Executor 扮演者
+- `~/.codex/AGENTS.md` 中的个人规则
 - `~/.claude/CLAUDE.md` 中的个人规则
 - `~/.config/opencode/AGENTS.md` 中的个人规则
 
