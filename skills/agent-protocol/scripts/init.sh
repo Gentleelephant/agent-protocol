@@ -10,7 +10,7 @@ set -euo pipefail
 
 PROJECT_MODE=0
 PLANNER_AGENT="Claude Code"
-EXECUTOR_AGENT="mastracode"
+EXECUTOR_AGENT="Mastra Code"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in

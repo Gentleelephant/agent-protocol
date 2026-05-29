@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.9
+version: v3.11
 description: "Use when the user wants to coordinate Claude Code and Mastra Code, set up Planner/Executor workflows, create or manage task handoff between agents, initialize agent collaboration config, review code for another agent to fix, or mentions task tracking, agent roles, multi-agent projects, /ap: commands, .agent-memory/tasks.json, or agent-protocol configuration."
 ---
 
