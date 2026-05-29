@@ -15,6 +15,28 @@ cd your-project
 ~/.agent-protocol/init.sh --project
 ```
 
+## 已接入项目更新
+
+如果 `agent-protocol` 仓库更新了，先更新本机协议：
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
+```
+
+然后进入项目目录，刷新项目引用：
+
+```bash
+cd your-project
+~/.agent-protocol/init.sh --project
+```
+
+如果要锁定到某个版本：
+
+```bash
+cd your-project
+~/.agent-protocol/init.sh --project --version v1.0
+```
+
 ## 工作原理
 
 - Planner (Codex)：分析、设计、Review，输出任务到 `.agent-memory/tasks.json`
@@ -47,3 +69,5 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/i
 ```
 
 更新本地协议时，重新执行安装命令即可覆盖 `~/.agent-protocol` 下的协议文件。
+
+已接入项目重新执行 `~/.agent-protocol/init.sh --project` 会刷新 `AGENTS.md` 和 `CLAUDE.md` 中的协议引用块，不会覆盖 `.agent-memory/tasks.json`。
