@@ -11,11 +11,8 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/i
 这会更新：
 
 - `~/.agent-protocol/`
-- `~/.codex/AGENTS.md`
-- `~/.claude/CLAUDE.md`
-- `~/.config/opencode/AGENTS.md`
 
-不会修改任何项目仓库里的 `AGENTS.md` 或 `CLAUDE.md`。
+不会修改全局 agent 规则，也不会修改任何项目仓库里的团队配置文件。
 
 ## 项目级个人配置
 
@@ -28,11 +25,24 @@ cd your-project
 
 这只会创建或保留：
 
+- `AGENTS.override.md`（Codex 项目级个人配置）
+- `CLAUDE.local.md`（Claude Code 项目级个人配置）
+- `.mastracode/AGENTS.md`（Mastra Code 项目级个人配置）
+- `opencode.json`（opencode 项目级个人配置；仅当文件不存在时创建）
 - `.agent-memory/agent-protocol.md`
 - `.agent-memory/tasks.json`
-- `.git/info/exclude` 中的 `.agent-memory/` 忽略规则
+- `.git/info/exclude` 中的本地忽略规则
 
 不会写入项目根目录的 `AGENTS.md` 或 `CLAUDE.md`。
+
+各 agent 的项目级个人配置入口：
+
+- Codex：`AGENTS.override.md`
+- Claude Code：`CLAUDE.local.md`
+- opencode：`opencode.json` 的 `instructions`
+- Mastra Code：`.mastracode/AGENTS.md`
+
+Mastra Code 的读取顺序是项目根目录 `AGENTS.md` / `CLAUDE.md`，然后 `.claude/AGENTS.md` / `.claude/CLAUDE.md`，最后 `.mastracode/AGENTS.md` / `.mastracode/CLAUDE.md`。如果团队仓库根目录已经有 `AGENTS.md` 或 `CLAUDE.md`，Mastra 会先读取团队文件；这是 Mastra Code 的官方 lookup order 限制。
 
 不同项目可以使用不同的 agent：
 
@@ -78,9 +88,6 @@ cd your-project
 - `~/.agent-protocol/PROTOCOL.md` 中的角色分工名称
 - `~/.agent-protocol/roles/planner.md` 中的 Planner 扮演者
 - `~/.agent-protocol/roles/executor.md` 中的 Executor 扮演者
-- `~/.codex/AGENTS.md` 中的个人规则
-- `~/.claude/CLAUDE.md` 中的个人规则
-- `~/.config/opencode/AGENTS.md` 中的个人规则
 
 也可以只替换其中一个角色：
 
@@ -95,7 +102,7 @@ cd your-project
 - Executor（默认 Claude Code，可切换）：读取任务，实现，更新状态
 - `PROTOCOL.md` 是唯一维护协议约定的地方
 - `roles/planner.md` 和 `roles/executor.md` 分别定义两个 agent 的职责
-- 各 agent 通过个人级规则读取协议，并通过 `.agent-memory/agent-protocol.md` 获取项目级个人配置；项目仓库不需要提交协议入口文件
+- 各 agent 通过项目级个人入口读取 `.agent-memory/agent-protocol.md`；这些入口文件通过 `.git/info/exclude` 保持不提交
 
 ## 文件说明
 

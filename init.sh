@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 用法:
 #   安装/更新协议: curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
-#   初始化/更新项目本地状态: ~/.agent-protocol/init.sh --project
+#   初始化/更新项目级个人配置: ~/.agent-protocol/init.sh --project
 #   指定版本:             ~/.agent-protocol/init.sh --version v1.0
 #   指定扮演者:           ~/.agent-protocol/init.sh --planner-agent opencode --executor-agent opencode
 
@@ -62,15 +62,10 @@ install_protocol() {
   chmod +x "$PROTOCOL_DIR/init.sh"
   write_protocol_file
   write_role_files
-  write_personal_configs
 
   echo "✓ 协议已安装: $PROTOCOL_DIR (version: $VERSION)"
   echo "  - Planner: $PLANNER_AGENT"
   echo "  - Executor: $EXECUTOR_AGENT"
-  echo "✓ 个人级规则已更新"
-  echo "  - ~/.codex/AGENTS.md"
-  echo "  - ~/.claude/CLAUDE.md"
-  echo "  - ~/.config/opencode/AGENTS.md"
 }
 
 write_protocol_file() {
@@ -169,63 +164,6 @@ EOF
 EOF
 }
 
-write_managed_block() {
-  local file="$1"
-  local start_marker="$2"
-  local end_marker="$3"
-  local content="$4"
-  local tmp_file
-
-  tmp_file="$(mktemp)"
-  mkdir -p "$(dirname "$file")"
-  touch "$file"
-
-  awk -v start="$start_marker" -v end="$end_marker" '
-    $0 == start {
-      skip_managed = 1
-      next
-    }
-    $0 == end {
-      skip_managed = 0
-      next
-    }
-    !skip_managed {
-      print
-    }
-  ' "$file" > "$tmp_file"
-
-  {
-    cat "$tmp_file"
-    printf "\n%s\n%s\n%s\n" "$start_marker" "$content" "$end_marker"
-  } > "$file"
-
-  rm -f "$tmp_file"
-}
-
-write_personal_configs() {
-  local content
-
-  content="## Agent 协作协议（个人级）
-
-这是本机个人规则，不要求项目提交 AGENTS.md 或 CLAUDE.md。
-
-当当前项目存在 \`.agent-memory/agent-protocol.md\` 或 \`.agent-memory/tasks.json\`，或用户提到 agent-protocol、Planner、Executor、创建 task、处理 pending task、review 后交给另一个 agent 时：
-
-- 读取 \`$PROTOCOL_DIR/PROTOCOL.md\`
-- 需要 Planner 行为时读取 \`$PROTOCOL_DIR/roles/planner.md\`
-- 需要 Executor 行为时读取 \`$PROTOCOL_DIR/roles/executor.md\`
-- 如果当前项目存在 \`.agent-memory/agent-protocol.md\`，先读取它，并以其中的项目级个人设置为准
-- Planner 当前由 $PLANNER_AGENT 扮演
-- Executor 当前由 $EXECUTOR_AGENT 扮演
-- Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
-- Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
-- 不要依赖项目根目录的 AGENTS.md / CLAUDE.md 来启用本协议"
-
-  write_managed_block "$HOME/.codex/AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
-  write_managed_block "$HOME/.claude/CLAUDE.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
-  write_managed_block "$HOME/.config/opencode/AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
-}
-
 init_project() {
   mkdir -p .agent-memory
 
@@ -255,6 +193,38 @@ init_project() {
 EOF
   project_config_message=".agent-memory/agent-protocol.md 已更新"
 
+  local entry_content
+  entry_content="## Agent 协作协议（项目级个人配置）
+
+这是当前项目的个人私有配置入口，不需要提交到团队仓库。
+
+请先读取 \`.agent-memory/agent-protocol.md\`，再按其中的读取顺序和角色规则执行。
+
+如果需要协议正文或角色说明：
+
+- 协议：\`$PROTOCOL_DIR/PROTOCOL.md\`
+- Planner：\`$PROTOCOL_DIR/roles/planner.md\`
+- Executor：\`$PROTOCOL_DIR/roles/executor.md\`"
+
+  printf "%s\n" "$entry_content" > AGENTS.override.md
+  printf "%s\n" "$entry_content" > CLAUDE.local.md
+  mkdir -p .mastracode
+  printf "%s\n" "$entry_content" > .mastracode/AGENTS.md
+
+  if [ ! -f "opencode.json" ]; then
+    cat > opencode.json << EOF
+{
+  "\$schema": "https://opencode.ai/config.json",
+  "instructions": [".agent-memory/agent-protocol.md"]
+}
+EOF
+    opencode_message="opencode.json 已创建"
+  elif grep -Fq ".agent-memory/agent-protocol.md" opencode.json; then
+    opencode_message="opencode.json 已包含 agent-protocol instructions"
+  else
+    opencode_message="opencode.json 已存在，未修改；请手动加入 instructions: [\".agent-memory/agent-protocol.md\"]"
+  fi
+
   if [ ! -f ".agent-memory/tasks.json" ]; then
     printf '{"tasks": []}\n' > .agent-memory/tasks.json
     tasks_message=".agent-memory/tasks.json 已创建"
@@ -262,17 +232,35 @@ EOF
     tasks_message=".agent-memory/tasks.json 已保留"
   fi
 
-  if [ -d ".git" ] && [ -f ".git/info/exclude" ] && ! grep -Fxq ".agent-memory/" ".git/info/exclude"; then
-    printf "\n# agent-protocol local state\n.agent-memory/\n" >> ".git/info/exclude"
-    exclude_message=".git/info/exclude 已加入 .agent-memory/"
+  if [ -d ".git" ] && [ -f ".git/info/exclude" ]; then
+    add_git_exclude ".agent-memory/"
+    add_git_exclude "AGENTS.override.md"
+    add_git_exclude "CLAUDE.local.md"
+    add_git_exclude ".mastracode/AGENTS.md"
+    if [ "$opencode_message" = "opencode.json 已创建" ]; then
+      add_git_exclude "opencode.json"
+    fi
+    exclude_message=".git/info/exclude 已更新"
   else
     exclude_message=".git/info/exclude 未修改"
   fi
 
-  echo "✓ 项目本地状态已初始化/更新"
+  echo "✓ 项目级个人配置已初始化/更新"
+  echo "  - AGENTS.override.md 已更新（Codex）"
+  echo "  - CLAUDE.local.md 已更新（Claude Code）"
+  echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
+  echo "  - $opencode_message"
   echo "  - $project_config_message"
   echo "  - $tasks_message"
   echo "  - $exclude_message"
+}
+
+add_git_exclude() {
+  local pattern="$1"
+
+  if ! grep -Fxq "$pattern" ".git/info/exclude"; then
+    printf "%s\n" "$pattern" >> ".git/info/exclude"
+  fi
 }
 
 install_protocol

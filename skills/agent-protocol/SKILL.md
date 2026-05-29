@@ -1,26 +1,31 @@
 ---
 name: agent-protocol
-description: Use when the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor agents across coding agents using the personal agent-protocol installation.
+description: Use when the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor agents across coding agents using project-level personal agent-protocol configuration.
 ---
 
 # Agent Protocol
 
-Use this skill to reduce friction when working with the personal `agent-protocol` installation.
+Use this skill to reduce friction when working with project-level personal `agent-protocol` configuration.
 
 ## Source Of Truth
 
-Before acting, inspect these personal protocol files when present:
+Before acting, inspect these protocol files when present:
 
 - `~/.agent-protocol/PROTOCOL.md`
 - `~/.agent-protocol/roles/planner.md`
 - `~/.agent-protocol/roles/executor.md`
 
-Use project files only for task state:
+Use project-local private files for per-project behavior and task state:
 
 - `.agent-memory/agent-protocol.md`
 - `.agent-memory/tasks.json`
 
-Do not require project-level `AGENTS.md` or `CLAUDE.md`; this protocol is intended to work from personal agent configuration plus project-local private state under `.agent-memory/`.
+Do not require team-shared project `AGENTS.md` or `CLAUDE.md`. This protocol is intended to work from project-level personal entries that are ignored by Git:
+
+- `AGENTS.override.md` for Codex
+- `CLAUDE.local.md` for Claude Code
+- `opencode.json` with `instructions: [".agent-memory/agent-protocol.md"]` for opencode
+- `.mastracode/AGENTS.md` for Mastra Code
 
 If the project has no task state and the user wants protocol handoff, tell the user to run:
 
