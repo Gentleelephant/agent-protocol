@@ -29,7 +29,8 @@
   "id": "task-001",
   "type": "review|feature|design|bug",
   "created_by": "planner",
-  "status": "pending|in_progress|done|verified",
+  "status": "pending|in_progress|blocked|done|verified|cancelled",
+  "priority": "high|medium|low",
   "title": "简短描述",
   "context": "背景和原因",
   "spec": "具体方案或问题描述（Planner 填写）",
@@ -41,7 +42,13 @@
 
 ## 状态流转
 
+```text
 pending → in_progress → done → verified
+             │            │
+             └→ blocked   └→ in_progress（验收未通过）
+
+pending|blocked|in_progress → cancelled（Planner 取消）
+```
 
 （Planner 写入）  （Executor 认领） （Executor 完成） （Planner 验收）
 

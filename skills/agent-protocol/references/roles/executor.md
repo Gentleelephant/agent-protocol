@@ -2,7 +2,7 @@
 
 ### 启动时
 
-先读取 `.agent-memory/agent-protocol.md` 确认当前 agent 是项目配置中的 Executor，再读取 `.agent-memory/tasks.json`，找出所有 `status: pending` 的任务。
+先读取 `.agent-memory/agent-protocol.md` 确认当前 agent 是项目配置中的 Executor，再读取 `.agent-memory/tasks.json`，找出所有 `status: pending` 的任务。如果任务文件缺失，创建 `{"tasks": []}` 并报告当前没有 pending task。
 
 ### 职责
 
@@ -20,7 +20,7 @@
 
 1. 读取已安装的 `agent-protocol` skill。
 2. 读取 `.agent-memory/agent-protocol.md`，确认当前 agent 是项目配置中的 Executor。
-3. 读取并尽量校验 `.agent-memory/tasks.json`。
+3. 读取 `.agent-memory/tasks.json`；如果缺失，创建 `{"tasks": []}`，报告没有 pending task，并停止执行。
 4. 选择与用户请求匹配的 pending task。
 5. 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
 6. 将认领任务改为 `in_progress`。
@@ -35,6 +35,6 @@
 
 ### 异常处理
 
-- 如果 `.agent-memory/tasks.json` 不存在，先报告无法执行，除非用户要求初始化。
+- 如果 `.agent-memory/tasks.json` 不存在，创建 `{"tasks": []}`，报告没有 pending task，不创建业务任务。
 - 如果 JSON 损坏或不符合 schema，不要认领任务。
 - 如果当前 agent 不是配置中的 Executor，拒绝副作用操作并提示正确 agent。

@@ -77,17 +77,17 @@ Planner-only:
 
 Executor-only:
 
-- `/ap:execute [task-id|next]`: claim and execute pending tasks.
-- `/ap:fix [task-id]`: fix a specific bug/review task.
-- `/ap:test [task-id]`: run verification and record results.
-- `/ap:done [task-id]`: mark a task done and fill implementation notes.
+- `/ap:execute [task-id|next]`: claim and execute pending tasks; omitted target means `next`.
+- `/ap:fix [task-id]`: fix a specific bug/review task; omitted target means the matching claimed or pending bug/review task.
+- `/ap:test [task-id]`: run verification and record results; omitted target means the current `in_progress` task.
+- `/ap:done [task-id]`: mark a task done and fill implementation notes; omitted target means the current `in_progress` task.
 
 Any role:
 
 - `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config.
-- `/ap:tasks`: list tasks.
+- `/ap:tasks [status]`: list tasks, optionally filtered by `pending`, `in_progress`, `blocked`, `done`, `verified`, or `cancelled`.
 - `/ap:status`: summarize task counts and next recommended action.
-- `/ap:help`: show command help.
+- `/ap:help [command]`: show command help.
 - `/ap:whoami`: show configured Planner and Executor for this project.
 
 ## Command Role Gate
@@ -197,7 +197,7 @@ Verify flow:
 ## Executor Workflow
 
 1. Read `.agent-memory/agent-protocol.md` if present.
-2. Load `.agent-memory/tasks.json`.
+2. Load `.agent-memory/tasks.json`; if it is missing, create it as `{"tasks": []}`, report that no pending tasks exist, and stop unless the user also asked to initialize or create tasks.
 3. Validate the task file against `references/schema/tasks.schema.json` when possible. If it is invalid, report the problem and do not claim tasks until it is repaired.
 4. Pick pending tasks relevant to the user's request. If several match, sort by `priority` (`high`, then `medium`, then `low`) and then by `created_at` ascending.
 5. Change claimed tasks to `in_progress`.

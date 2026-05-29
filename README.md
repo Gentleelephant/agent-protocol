@@ -101,31 +101,57 @@ Executor 负责：
 
 ## /ap: 命令
 
-Planner：
+所有协议命令都使用 `/ap:` 前缀。
 
-- `/ap:review [scope]`
-- `/ap:plan [requirement]`
-- `/ap:task [summary]`
-- `/ap:verify [task-id|all]`
-
-Executor：
-
-- `/ap:execute [task-id|next]`
-- `/ap:fix [task-id]`
-- `/ap:test [task-id]`
-- `/ap:done [task-id]`
-
-通用：
-
-- `/ap:init planner=<agent> executor=<agent>`
-- `/ap:tasks`
-- `/ap:status`
-- `/ap:help`
-- `/ap:whoami`
+| 命令 | 角色 | 参数 | 可选值 / 格式 | 行为 |
+|---|---|---|---|---|
+| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Codex`、`Claude Code`、`mastracode`；含空格时用引号 | 初始化或更新项目级个人配置 |
+| `/ap:review` | Planner | `[scope]` | 可省略；文件、目录、模块名或自然语言范围 | 审查代码并创建 `review` task，不直接改业务代码 |
+| `/ap:plan` | Planner | `[requirement]` | 需求描述、架构问题、设计目标 | 创建 `feature` 或 `design` task |
+| `/ap:task` | Planner | `[summary]` | 当前讨论结论或任务摘要 | 把讨论结果保存成 pending task |
+| `/ap:verify` | Planner | `[task-id\|all]` | `task-001` 或 `all`；省略时检查可验收的 done task | 验收 done task，通过则改为 `verified`，不通过则退回 `in_progress` |
+| `/ap:execute` | Executor | `[task-id\|next]` | `task-001` 或 `next`；省略等同于 `next` | 认领并执行 pending task |
+| `/ap:fix` | Executor | `[task-id]` | `task-001`；省略时选择匹配的 bug/review task | 修复指定 bug/review task |
+| `/ap:test` | Executor | `[task-id]` | `task-001`；省略时针对当前 in_progress task | 运行验证并记录结果 |
+| `/ap:done` | Executor | `[task-id]` | `task-001`；省略时针对当前 in_progress task | 标记任务 `done` 并填写实现说明 |
+| `/ap:tasks` | 通用 | `[status]` | `pending`、`in_progress`、`blocked`、`done`、`verified`、`cancelled`；省略显示全部 | 列出任务 |
+| `/ap:status` | 通用 | 无 | 无 | 汇总任务数量和下一步建议 |
+| `/ap:help` | 通用 | `[command]` | 任意 `/ap:` 命令名；省略显示全部帮助 | 显示命令帮助 |
+| `/ap:whoami` | 通用 | 无 | 无 | 显示当前项目配置的 Planner / Executor |
 
 除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Codex`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Codex 收到 `/ap:execute next` 时不能执行代码修改。
 
 如果要修改项目角色绑定，重新运行 `/ap:init planner=<agent> executor=<agent>`。
+
+## 任务字段
+
+`.agent-memory/tasks.json` 的任务字段和可选值：
+
+| 字段 | 必填 | 可选值 / 格式 | 维护者 |
+|---|---|---|---|
+| `id` | 是 | `task-001` 递增格式 | Planner 创建 |
+| `type` | 是 | `review`、`feature`、`design`、`bug` | Planner 创建 |
+| `created_by` | 是 | 固定为 `planner` | Planner 创建 |
+| `status` | 是 | `pending`、`in_progress`、`blocked`、`done`、`verified`、`cancelled` | Planner / Executor 按状态流转维护 |
+| `priority` | 否 | `high`、`medium`、`low`；默认按 `medium` 理解 | Planner 创建，Executor 用于排序 |
+| `title` | 是 | 简短标题 | Planner 创建 |
+| `context` | 是 | 背景和原因 | Planner 创建 |
+| `spec` | 是 | Executor 可执行的具体要求 | Planner 创建 |
+| `implementation_notes` | 否 | 实现、验证、阻塞或退回说明 | Executor 填写，Planner 验收失败时可追加反馈 |
+| `created_at` | 是 | ISO 时间字符串 | Planner 创建 |
+| `updated_at` | 是 | ISO 时间字符串 | 当前修改者更新 |
+
+状态流转：
+
+```text
+pending -> in_progress -> done -> verified
+             |            |
+             -> blocked   -> in_progress（验收未通过）
+
+pending|blocked|in_progress -> cancelled
+```
+
+Executor 选择任务时，先按 `priority` 的 `high`、`medium`、`low` 排序，同优先级按 `created_at` 升序处理。
 
 ## Agent 入口文件
 
