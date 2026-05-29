@@ -25,27 +25,19 @@ agent-protocol/
 
 ## 核心模式
 
-`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令文件内嵌在 skill 中（`adapters/`），随 skill 一起分发。用户只需安装这一个 skill，首次使用时通过 `/ap:install` 安装命令，之后全程使用 `/ap:` 命令协作。
+`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令文件内嵌在 skill 中（`adapters/`），随 skill 一起分发。用户只需安装这一个 skill，首次使用时告诉 agent "安装 agent-protocol 子命令"，之后全程使用 `/ap:` 命令协作。
 
 ## 安装
 
-1. 安装 `agent-protocol` skill 到对应平台：
-   - Claude Code：将 `skills/agent-protocol/` 放到 `~/.claude/skills/`
-   - Mastra Code：将 `skills/agent-protocol/` 放到 `~/.mastracode/skills/`
+1. 安装 `skills/agent-protocol/` 到对应平台：
+   - Claude Code → `~/.claude/skills/agent-protocol/`
+   - Mastra Code → `~/.mastracode/skills/agent-protocol/`
 
-2. 在任一 agent 中执行：
+2. 在任一 agent 中说：
 
-```text
-/ap:install
-```
+> 安装 agent-protocol 子命令
 
-首次执行会自动安装当前平台的所有 `/ap:` 命令。也可以显式指定平台：
-
-```text
-/ap:install claude
-/ap:install mastracode
-/ap:install all
-```
+Agent 会自动把 `/ap:` 命令安装到当前项目。
 
 3. 初始化项目：
 

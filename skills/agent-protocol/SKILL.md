@@ -52,11 +52,14 @@ Choose the role from the user's intent:
 
 Default trigger rules:
 
+- User says install commands, install subcommands, install /ap: commands, install agent-protocol commands, 安装子命令: copy command files from this skill's adapters/ directory to the current agent's command path. See Install Workflow below.
 - User says review, audit, inspect, check code, find bugs, security issue, performance issue, design issue: act as Planner and create pending tasks.
 - User says plan, design, break down, analyze requirement, architecture decision: act as Planner and create feature or design tasks.
 - User says process pending task, implement task, fix task, continue Executor work: act as Executor and update task state.
 - User says verify, validate, review done task, accept done task: act as Planner and mark valid done tasks as verified.
 - User explicitly says directly implement, directly edit code, do not create tasks, or no protocol: follow normal coding behavior for that request.
+
+If the user asks to install agent-protocol commands or subcommands, copy the command files and report what was installed. Do not create tasks. See Install Workflow below.
 
 If the user asks for planning, review, task creation, or handoff, do not edit production code. Act as Planner and append tasks.
 
@@ -87,7 +90,6 @@ Executor-only:
 Any role:
 
 - `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. Agent examples: `Claude Code`, `mastracode`.
-- `/ap:install [claude|mastracode|all]`: install /ap: custom commands for the specified platform. Omitted platform defaults to the current agent, detected from runtime context.
 - `/ap:tasks [status]`: list tasks. Omitted status lists all tasks. Status examples: `pending`, `in_progress`, `blocked`, `done`, `verified`, `cancelled`.
 - `/ap:status`: summarize task counts and next recommended action.
 - `/ap:help [command]`: show command help. Omitted command lists all commands with one-line summaries. Examples: `/ap:help review`, `/ap:help execute`.
@@ -95,7 +97,7 @@ Any role:
 
 ## Command Role Gate
 
-Before executing any `/ap:` command with side effects, except `/ap:init` and `/ap:install`:
+Before executing any `/ap:` command with side effects, except `/ap:init`:
 
 1. Read `.agent-memory/agent-protocol.md`.
 2. Identify the configured `Planner` and `Executor`.
@@ -166,29 +168,22 @@ Init file content requirements:
 
 ## Install Workflow
 
-`/ap:install` is a configuration command. Any agent may run it because it only copies files, not implementing product code or completing protocol tasks.
-
-Syntax:
-
-```text
-/ap:install [claude|mastracode|all]
-```
-
-When platform is omitted, detect the current agent from runtime context and install commands for it.
+When the user asks to install agent-protocol commands/subcommands (e.g. "安装子命令", "install /ap: commands"), this is a configuration action. Any agent may handle it because it only copies files.
 
 Workflow:
 
-1. Locate this skill's install directory. The command files live at `<skill-root>/adapters/`.
-2. Determine target platform: `claude`, `mastracode`, or `all`.
-3. Determine base directory from `--scope` (default: `project` for current directory, or `user` for `~/.claude` / `~/.mastracode`).
-   - Claude Code project scope: `.claude/commands/`
-   - Claude Code user scope: `~/.claude/commands/`
-   - Mastra Code project scope: `.mastracode/commands/ap/`
-   - Mastra Code user scope: `~/.mastracode/commands/ap/`
-4. Copy command files from `<skill-root>/adapters/<platform>/commands/` to the target directory.
-5. Report installed files and their target paths.
+1. Detect the current agent from runtime context (Claude Code vs Mastra Code).
+2. If the user specifies a platform (`claude`, `mastracode`, `all`), use that. Otherwise use the detected agent.
+3. Locate this skill's install directory. The command files live at `<skill-root>/adapters/`.
+4. Determine scope:
+   - If the user mentions "user" or "global": install to user-level (`~/.claude/`, `~/.mastracode/`)
+   - Default: install to project-level (`.claude/`, `.mastracode/`)
+5. Copy files:
+   - Claude Code: copy `<skill-root>/adapters/claude/commands/ap:*.md` to `<base>/commands/`
+   - Mastra Code: copy `<skill-root>/adapters/mastracode/commands/ap/*.md` to `<base>/commands/ap/`
+6. Report what was installed and where.
 
-After install, summarize which platform commands were installed and where.
+Do not create tasks for this action. Do not edit repository code. Do not run `/ap:init` unless the user also asked to initialize.
 
 ## Planner Workflow
 
