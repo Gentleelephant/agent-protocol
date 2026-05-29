@@ -4,28 +4,21 @@ Claude Code、Mastra Code 之间的项目级个人协作协议。
 
 ## 项目结构
 
-仓库包含一个共享协议 skill，以及面向 Claude Code 和 Mastra Code 的命令适配层：
-
 ```text
 agent-protocol/
 ├── skills/
-│   └── agent-protocol/
-│       ├── SKILL.md             # 协议唯一来源（所有详细工作流）
-│       ├── scripts/init.sh
-│       └── references/
-│           ├── protocol.md
-│           ├── roles/planner.md
-│           ├── roles/executor.md
-│           └── schema/tasks.schema.json
+│   ├── agent-protocol/          # 共享协议 skill
+│   │   ├── SKILL.md             # 协议唯一来源（工作流、角色门禁、任务结构）
+│   │   ├── scripts/init.sh
+│   │   └── references/
+│   ├── ap:init/SKILL.md         # Claude Code 命令 skill → /ap:init
+│   ├── ap:review/SKILL.md       # → /ap:review
+│   ├── ...
+│   └── ap:whoami/SKILL.md
 ├── adapters/
-│   ├── claude/
-│   │   └── skills/
-│   │       ├── ap:init/SKILL.md # Claude Code 命令 skill，注册为 /ap:init
-│   │       ├── ap:review/SKILL.md
-│   │       └── ...
 │   └── mastracode/
 │       └── commands/
-│           └── ap/              # Mastra Code 命令，注册为 /ap:<file>
+│           └── ap/              # Mastra Code 命令 → /ap:<file>
 │               ├── init.md
 │               ├── review.md
 │               └── ...
@@ -35,11 +28,11 @@ agent-protocol/
 
 ## 核心模式
 
-`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令适配层只做一件事：把平台原生 slash command 映射到同一个 skill 工作流。当前版本只支持 Claude Code 和 Mastra Code。
+`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令适配层只做一件事：把平台原生 slash command 映射到同一个 skill 工作流。
 
-- Claude Code 使用命令 skill：`adapters/claude/skills/ap:init/SKILL.md` 安装后注册为 `/ap:init`。
-- Mastra Code 使用 custom slash command：`adapters/mastracode/commands/ap/init.md` 安装后注册为 `/ap:init`。
-- 子命令目录在安装时创建；`/ap:init` 只初始化项目级个人配置和任务状态，不负责安装命令。
+- Claude Code：14 个独立 skill（`skills/ap:*/SKILL.md`），安装到 `~/.claude/skills/` 后暴露为 `/ap:xxx`。
+- Mastra Code：14 个 custom slash command（`adapters/mastracode/commands/ap/*.md`），安装后为 `/ap:xxx`。
+- `/ap:init` 只初始化项目级个人配置和任务状态，不负责安装命令。
 
 ## 安装
 

@@ -96,13 +96,13 @@ install_claude() {
 
   mkdir -p "$base/skills"
   local found=0
-  for command_skill in "$REPO_ROOT"/adapters/claude/skills/ap:*; do
+  for command_skill in "$REPO_ROOT"/skills/ap:*; do
     [ -d "$command_skill" ] || continue
     found=1
     copy_dir "$command_skill" "$base/skills/$(basename "$command_skill")"
   done
   if [ "$found" -eq 0 ]; then
-    echo "error: no Claude adapter skills found at adapters/claude/skills/ap:*" >&2
+    echo "error: no /ap: command skills found at skills/ap:*" >&2
     exit 1
   fi
 
