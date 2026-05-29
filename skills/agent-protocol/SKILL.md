@@ -17,9 +17,10 @@ Before acting, inspect these personal protocol files when present:
 
 Use project files only for task state:
 
+- `.agent-memory/agent-protocol.md`
 - `.agent-memory/tasks.json`
 
-Do not require project-level `AGENTS.md` or `CLAUDE.md`; this protocol is intended to work from personal agent configuration.
+Do not require project-level `AGENTS.md` or `CLAUDE.md`; this protocol is intended to work from personal agent configuration plus project-local private state under `.agent-memory/`.
 
 If the project has no task state and the user wants protocol handoff, tell the user to run:
 
@@ -43,12 +44,13 @@ If the user asks to directly implement a feature and does not mention protocol/t
 ## Planner Workflow
 
 1. Read protocol and planner role files.
-2. Inspect enough project context to create concrete tasks.
-3. Load `.agent-memory/tasks.json`; create it as `{"tasks": []}` if missing.
-4. Append new tasks only. Do not overwrite existing tasks.
-5. Use `status: "pending"` and `created_by: "planner"`.
-6. Fill `id`, `type`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
-7. Do not fill `implementation_notes` unless preserving an existing value.
+2. Read `.agent-memory/agent-protocol.md` if present.
+3. Inspect enough project context to create concrete tasks.
+4. Load `.agent-memory/tasks.json`; create it as `{"tasks": []}` if missing.
+5. Append new tasks only. Do not overwrite existing tasks.
+6. Use `status: "pending"` and `created_by: "planner"`.
+7. Fill `id`, `type`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
+8. Do not fill `implementation_notes` unless preserving an existing value.
 
 Task ids should continue the existing `task-NNN` sequence.
 
@@ -64,13 +66,14 @@ When reviewing Executor work, Planner may change completed tasks from `done` to 
 ## Executor Workflow
 
 1. Read protocol and executor role files.
-2. Load `.agent-memory/tasks.json`.
-3. Pick pending tasks relevant to the user's request.
-4. Change claimed tasks to `in_progress`.
-5. Implement or fix according to `spec`.
-6. Run appropriate verification.
-7. Change completed tasks to `done`.
-8. Fill `implementation_notes` and `updated_at`.
+2. Read `.agent-memory/agent-protocol.md` if present.
+3. Load `.agent-memory/tasks.json`.
+4. Pick pending tasks relevant to the user's request.
+5. Change claimed tasks to `in_progress`.
+6. Implement or fix according to `spec`.
+7. Run appropriate verification.
+8. Change completed tasks to `done`.
+9. Fill `implementation_notes` and `updated_at`.
 
 Do not modify Planner-owned fields such as `spec`, `context`, `title`, or `created_by`.
 

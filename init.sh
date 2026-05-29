@@ -209,11 +209,12 @@ write_personal_configs() {
 
 这是本机个人规则，不要求项目提交 AGENTS.md 或 CLAUDE.md。
 
-当当前项目存在 \`.agent-memory/tasks.json\`，或用户提到 agent-protocol、Planner、Executor、创建 task、处理 pending task、review 后交给另一个 agent 时：
+当当前项目存在 \`.agent-memory/agent-protocol.md\` 或 \`.agent-memory/tasks.json\`，或用户提到 agent-protocol、Planner、Executor、创建 task、处理 pending task、review 后交给另一个 agent 时：
 
 - 读取 \`$PROTOCOL_DIR/PROTOCOL.md\`
 - 需要 Planner 行为时读取 \`$PROTOCOL_DIR/roles/planner.md\`
 - 需要 Executor 行为时读取 \`$PROTOCOL_DIR/roles/executor.md\`
+- 如果当前项目存在 \`.agent-memory/agent-protocol.md\`，先读取它，并以其中的项目级个人设置为准
 - Planner 当前由 $PLANNER_AGENT 扮演
 - Executor 当前由 $EXECUTOR_AGENT 扮演
 - Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
@@ -227,6 +228,32 @@ write_personal_configs() {
 
 init_project() {
   mkdir -p .agent-memory
+
+  cat > ".agent-memory/agent-protocol.md" << EOF
+# Agent 协作协议（项目级个人配置）
+
+这是当前项目的个人私有配置，位于 \`.agent-memory/\` 下，不需要提交到团队仓库。
+
+## 项目角色
+
+- Planner: $PLANNER_AGENT
+- Executor: $EXECUTOR_AGENT
+
+## 读取顺序
+
+1. 先读取 \`$PROTOCOL_DIR/PROTOCOL.md\`
+2. Planner 行为读取 \`$PROTOCOL_DIR/roles/planner.md\`
+3. Executor 行为读取 \`$PROTOCOL_DIR/roles/executor.md\`
+4. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
+
+## 项目规则
+
+- 不要修改项目根目录的 \`AGENTS.md\` 或 \`CLAUDE.md\` 来启用本协议
+- Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
+- Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
+- \`.agent-memory/\` 是个人本地状态目录，应保持不提交
+EOF
+  project_config_message=".agent-memory/agent-protocol.md 已更新"
 
   if [ ! -f ".agent-memory/tasks.json" ]; then
     printf '{"tasks": []}\n' > .agent-memory/tasks.json
@@ -243,6 +270,7 @@ init_project() {
   fi
 
   echo "✓ 项目本地状态已初始化/更新"
+  echo "  - $project_config_message"
   echo "  - $tasks_message"
   echo "  - $exclude_message"
 }

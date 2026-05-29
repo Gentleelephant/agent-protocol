@@ -17,9 +17,9 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/i
 
 不会修改任何项目仓库里的 `AGENTS.md` 或 `CLAUDE.md`。
 
-## 项目本地状态
+## 项目级个人配置
 
-如果某个项目要使用任务交接文件，只在该项目里创建本地状态：
+如果某个项目要使用自己的 agent-protocol 设置，只在该项目里创建个人私有配置：
 
 ```bash
 cd your-project
@@ -28,10 +28,21 @@ cd your-project
 
 这只会创建或保留：
 
+- `.agent-memory/agent-protocol.md`
 - `.agent-memory/tasks.json`
 - `.git/info/exclude` 中的 `.agent-memory/` 忽略规则
 
 不会写入项目根目录的 `AGENTS.md` 或 `CLAUDE.md`。
+
+不同项目可以使用不同的 agent：
+
+```bash
+cd project-a
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent opencode
+
+cd ../project-b
+~/.agent-protocol/init.sh --project --planner-agent opencode --executor-agent opencode
+```
 
 ## 更新
 
@@ -41,7 +52,7 @@ cd your-project
 curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
 ```
 
-如果项目已经有 `.agent-memory/tasks.json`，不需要修改项目文件。需要时可以重新执行：
+如果项目已经有 `.agent-memory/agent-protocol.md` 和 `.agent-memory/tasks.json`，不需要修改团队文件。需要时可以重新执行：
 
 ```bash
 cd your-project
@@ -84,7 +95,7 @@ cd your-project
 - Executor（默认 Claude Code，可切换）：读取任务，实现，更新状态
 - `PROTOCOL.md` 是唯一维护协议约定的地方
 - `roles/planner.md` 和 `roles/executor.md` 分别定义两个 agent 的职责
-- 各 agent 通过个人级规则读取协议；项目仓库不需要提交协议入口文件
+- 各 agent 通过个人级规则读取协议，并通过 `.agent-memory/agent-protocol.md` 获取项目级个人配置；项目仓库不需要提交协议入口文件
 
 ## 文件说明
 
