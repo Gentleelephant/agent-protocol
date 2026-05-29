@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.12
+version: v3.13
 description: "Use when the user wants to coordinate Claude Code and Mastra Code, set up Planner/Executor workflows, create or manage task handoff between agents, initialize agent collaboration config, review code for another agent to fix, or mentions task tracking, agent roles, multi-agent projects, /ap: commands, .agent-memory/tasks.json, or agent-protocol configuration."
 ---
 
@@ -132,10 +132,10 @@ Syntax:
 Examples:
 
 ```text
-/ap:init planner="Claude Code" executor=mastracode
+/ap:init planner="Claude Code" executor="Mastra Code"
 ```
 
-If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Claude Code` and `Executor: mastracode`, then report the defaults.
+If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Claude Code` and `Executor: Mastra Code`, then report the defaults.
 
 When running `/ap:init`, create or update these project-local private files:
 

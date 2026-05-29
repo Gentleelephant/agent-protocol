@@ -3,10 +3,10 @@ set -euo pipefail
 
 # 用法:
 #   初始化/更新当前项目级个人配置:
-#     skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent mastracode
-#     skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor=mastracode
+#     skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
+#     skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor="Mastra Code"
 #   通过远端脚本运行:
-#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent mastracode
+#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
 
 PROJECT_MODE=0
 PLANNER_AGENT="Claude Code"

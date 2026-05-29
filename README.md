@@ -42,7 +42,7 @@ Agent 会自动把 `/ap:` 命令安装到当前项目。
 3. 初始化项目：
 
 ```text
-/ap:init planner="Claude Code" executor=mastracode
+/ap:init planner="Claude Code" executor="Mastra Code"
 ```
 
 ## 使用流程
@@ -50,13 +50,13 @@ Agent 会自动把 `/ap:` 命令安装到当前项目。
 1. 在项目中初始化：
 
 ```text
-/ap:init planner="Claude Code" executor=mastracode
+/ap:init planner="Claude Code" executor="Mastra Code"
 ```
 
 也可以使用可选脚本：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent mastracode
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
 ```
 
 2. 创建任务：
@@ -117,7 +117,7 @@ Executor 负责：
 
 | 命令 | 角色 | 参数 | 可选值 / 格式 | 行为 |
 |---|---|---|---|---|
-| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Claude Code`、`mastracode`；含空格时用引号 | 初始化或更新项目级个人配置 |
+| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Claude Code`、`Mastra Code`；含空格时用引号 | 初始化或更新项目级个人配置 |
 | `/ap:review` | Planner | `[scope]` | 可省略；文件、目录、模块名或自然语言范围 | 审查代码并创建 `review` task，不直接改业务代码 |
 | `/ap:plan` | Planner | `[requirement]` | 需求描述、架构问题、设计目标 | 创建 `feature` 或 `design` task |
 | `/ap:task` | Planner | `[summary]` | 当前讨论结论或任务摘要 | 把讨论结果保存成 pending task |
@@ -131,7 +131,7 @@ Executor 负责：
 | `/ap:help` | 通用 | `[command]` | 任意 `/ap:` 命令名；省略显示全部帮助 | 显示命令帮助 |
 | `/ap:whoami` | 通用 | 无 | 无 | 显示当前项目配置的 Planner / Executor |
 
-除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Claude Code`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Claude Code 收到 `/ap:execute next` 时不能执行代码修改。
+除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Claude Code`、`Executor: Mastra Code`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Claude Code 收到 `/ap:execute next` 时不能执行代码修改。
 
 如果要修改项目角色绑定，重新运行 `/ap:init planner=<agent> executor=<agent>`。
 
@@ -188,6 +188,6 @@ Mastra Code：
 运行：
 
 ```bash
-skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent mastracode
-skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor=mastracode
+skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
+skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor="Mastra Code"
 ```
