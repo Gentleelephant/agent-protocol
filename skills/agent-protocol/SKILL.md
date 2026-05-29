@@ -9,11 +9,7 @@ Use this skill to reduce friction when working with project-level personal `agen
 
 ## Source Of Truth
 
-Before acting, inspect these protocol files when present:
-
-- `~/.agent-protocol/PROTOCOL.md`
-- `~/.agent-protocol/roles/planner.md`
-- `~/.agent-protocol/roles/executor.md`
+The installed `agent-protocol` skill is the protocol source of truth.
 
 Use project-local private files for per-project behavior and task state:
 
@@ -28,10 +24,10 @@ Do not require team-shared project `AGENTS.md` or `CLAUDE.md`. This protocol is 
 
 Each agent should have this skill installed separately. The skill defines the shared workflow; the project entry file tells the specific agent where to read the project-level personal protocol config.
 
-If the project has no task state and the user wants protocol handoff, tell the user to run:
+If the project has no task state and the user wants protocol handoff, run `/ap:init` or tell the user to run:
 
 ```bash
-~/.agent-protocol/init.sh --project
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --project
 ```
 
 ## Role Selection
@@ -101,7 +97,7 @@ When roles do not match, do not create tasks, edit code, or change task status. 
 - the command to change project binding:
 
 ```bash
-~/.agent-protocol/init.sh --project --planner-agent <agent> --executor-agent <agent>
+/ap:init planner=<agent> executor=<agent>
 ```
 
 `/ap:switch` changes only current-session perspective. It must not bypass project role binding for side-effect commands.
@@ -125,17 +121,7 @@ Examples:
 
 If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Codex` and `Executor: Claude Code`, then report the defaults.
 
-When running `/ap:init`, create or update these personal protocol files:
-
-```text
-~/.agent-protocol/
-~/.agent-protocol/PROTOCOL.md
-~/.agent-protocol/roles/planner.md
-~/.agent-protocol/roles/executor.md
-~/.agent-protocol/schema/tasks.schema.json
-```
-
-Also create or update these project-local private files:
+When running `/ap:init`, create or update these project-local private files:
 
 ```text
 .agent-memory/agent-protocol.md
@@ -162,23 +148,19 @@ After init, summarize the configured Planner, Executor, created/updated files, a
 
 Init file content requirements:
 
-- `~/.agent-protocol/PROTOCOL.md`: include role split, `.agent-memory/tasks.json` as shared memory, task types, JSON task shape, `pending -> in_progress -> done -> verified`, and field ownership rules.
-- `~/.agent-protocol/roles/planner.md`: include Planner responsibilities, task creation rules, and the prohibition on editing product code during Planner work.
-- `~/.agent-protocol/roles/executor.md`: include Executor responsibilities, pending task claim flow, done status update, and Planner-owned field restrictions.
-- `.agent-memory/agent-protocol.md`: include configured Planner/Executor, read order, default trigger rules, `/ap:` command table, command role gate, and project-local privacy rules.
+- `.agent-memory/agent-protocol.md`: include configured Planner/Executor, skill as protocol source, role split, default trigger rules, `/ap:` command table, command role gate, task lifecycle, and project-local privacy rules.
 - `AGENTS.override.md`, `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and require command role gate checks before side effects.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
 ## Planner Workflow
 
-1. Read protocol and planner role files.
-2. Read `.agent-memory/agent-protocol.md` if present.
-3. Inspect enough project context to create concrete tasks.
-4. Load `.agent-memory/tasks.json`; create it as `{"tasks": []}` if missing.
-5. Append new tasks only. Do not overwrite existing tasks.
-6. Use `status: "pending"` and `created_by: "planner"`.
-7. Fill `id`, `type`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
-8. Do not fill `implementation_notes` unless preserving an existing value.
+1. Read `.agent-memory/agent-protocol.md` if present.
+2. Inspect enough project context to create concrete tasks.
+3. Load `.agent-memory/tasks.json`; create it as `{"tasks": []}` if missing.
+4. Append new tasks only. Do not overwrite existing tasks.
+5. Use `status: "pending"` and `created_by: "planner"`.
+6. Fill `id`, `type`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
+7. Do not fill `implementation_notes` unless preserving an existing value.
 
 Task ids should continue the existing `task-NNN` sequence.
 
@@ -193,15 +175,14 @@ When reviewing Executor work, Planner may change completed tasks from `done` to 
 
 ## Executor Workflow
 
-1. Read protocol and executor role files.
-2. Read `.agent-memory/agent-protocol.md` if present.
-3. Load `.agent-memory/tasks.json`.
-4. Pick pending tasks relevant to the user's request.
-5. Change claimed tasks to `in_progress`.
-6. Implement or fix according to `spec`.
-7. Run appropriate verification.
-8. Change completed tasks to `done`.
-9. Fill `implementation_notes` and `updated_at`.
+1. Read `.agent-memory/agent-protocol.md` if present.
+2. Load `.agent-memory/tasks.json`.
+3. Pick pending tasks relevant to the user's request.
+4. Change claimed tasks to `in_progress`.
+5. Implement or fix according to `spec`.
+6. Run appropriate verification.
+7. Change completed tasks to `done`.
+8. Fill `implementation_notes` and `updated_at`.
 
 Do not modify Planner-owned fields such as `spec`, `context`, `title`, or `created_by`.
 

@@ -2,17 +2,14 @@
 set -euo pipefail
 
 # 用法:
-#   安装/更新协议: curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
-#   初始化/更新项目级个人配置: ~/.agent-protocol/init.sh --project
-#   指定版本:             ~/.agent-protocol/init.sh --version v1.0
-#   指定扮演者:           ~/.agent-protocol/init.sh --planner-agent Codex --executor-agent mastracode
+#   初始化/更新当前项目级个人配置:
+#     ./init.sh --project --planner-agent Codex --executor-agent mastracode
+#   通过远端脚本运行:
+#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
 
-REPO_RAW="https://raw.githubusercontent.com/Gentleelephant/agent-protocol"
-VERSION="main"
 PROJECT_MODE=0
 PLANNER_AGENT="Codex"
 EXECUTOR_AGENT="Claude Code"
-PROTOCOL_DIR="$HOME/.agent-protocol"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -21,11 +18,11 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     --version)
+      # Accepted for compatibility with older commands; the downloaded script version already fixes content.
       if [ "$#" -lt 2 ]; then
         echo "error: --version requires a value" >&2
         exit 1
       fi
-      VERSION="$2"
       shift 2
       ;;
     --planner-agent)
@@ -51,126 +48,19 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-install_protocol() {
-  mkdir -p "$PROTOCOL_DIR/roles" "$PROTOCOL_DIR/schema"
+if [ "$PROJECT_MODE" -ne 1 ]; then
+  echo "error: this script only initializes project-local personal config. Use --project." >&2
+  exit 1
+fi
 
-  curl -fsSL "$REPO_RAW/$VERSION/PROTOCOL.md" -o "$PROTOCOL_DIR/PROTOCOL.md"
-  curl -fsSL "$REPO_RAW/$VERSION/roles/planner.md" -o "$PROTOCOL_DIR/roles/planner.md"
-  curl -fsSL "$REPO_RAW/$VERSION/roles/executor.md" -o "$PROTOCOL_DIR/roles/executor.md"
-  curl -fsSL "$REPO_RAW/$VERSION/schema/tasks.schema.json" -o "$PROTOCOL_DIR/schema/tasks.schema.json"
-  curl -fsSL "$REPO_RAW/$VERSION/init.sh" -o "$PROTOCOL_DIR/init.sh"
-  chmod +x "$PROTOCOL_DIR/init.sh"
-  write_protocol_file
-  write_role_files
+mkdir -p .agent-memory
 
-  echo "✓ 协议已安装: $PROTOCOL_DIR (version: $VERSION)"
-  echo "  - Planner: $PLANNER_AGENT"
-  echo "  - Executor: $EXECUTOR_AGENT"
-}
-
-write_protocol_file() {
-  cat > "$PROTOCOL_DIR/PROTOCOL.md" << EOF
-# Agent 协作协议 v1.0
-
-## 角色分工
-
-- **Planner**（${PLANNER_AGENT}）：负责分析、设计、review，输出任务
-- **Executor**（${EXECUTOR_AGENT}）：负责实现、修复，更新任务状态
-
-## 共享记忆位置
-
-项目根目录下的 \`.agent-memory/tasks.json\`
-
-## 任务类型
-
-- \`review\`：代码审查，Planner 发现问题
-- \`feature\`：新功能，Planner 提出方案
-- \`design\`：架构设计，Planner 提出方案
-- \`bug\`：缺陷修复
-
-## 任务结构（JSON）
-
-\`\`\`json
-{
-  "id": "task-001",
-  "type": "review|feature|design|bug",
-  "created_by": "planner",
-  "status": "pending|in_progress|done|verified",
-  "title": "简短描述",
-  "context": "背景和原因",
-  "spec": "具体方案或问题描述（Planner 填写）",
-  "implementation_notes": "实现备注（Executor 填写）",
-  "created_at": "",
-  "updated_at": ""
-}
-\`\`\`
-
-## 状态流转
-
-pending → in_progress → done → verified
-
-（Planner 写入）  （Executor 认领） （Executor 完成） （Planner 验收）
-
-## 规则
-
-- Planner 只写 pending 状态，不修改 Executor 的字段
-- Executor 只改 status / implementation_notes，不修改 spec
-- 追加任务，不覆盖整个文件
-EOF
-}
-
-write_role_files() {
-  cat > "$PROTOCOL_DIR/roles/planner.md" << EOF
-## 你是 Planner 角色（由 ${PLANNER_AGENT} 扮演）
-
-### 职责
-
-- 分析需求、设计方案、review 代码
-- 将所有输出写入 \`.agent-memory/tasks.json\`
-- 只写 \`status: pending\`，等待 Executor 认领
-- 完成后验收 Executor 的工作，将 status 改为 verified
-
-### 何时创建任务
-
-- 发现 bug 或安全问题 → type: review
-- 用户提出新功能需求 → type: feature
-- 需要架构决策 → type: design
-
-### 禁止事项
-
-- 不要自己动手改代码
-- 不要将 status 改为 pending 以外的值（verified 除外）
-- 不要覆盖整个 tasks.json，只追加新任务
-EOF
-
-  cat > "$PROTOCOL_DIR/roles/executor.md" << EOF
-## 你是 Executor 角色（由 ${EXECUTOR_AGENT} 扮演）
-
-### 启动时
-
-先读取 \`.agent-memory/tasks.json\`，找出所有 \`status: pending\` 的任务
-
-### 职责
-
-- 将认领的任务 status 改为 in_progress
-- 按照 spec 实现或修复
-- 完成后将 status 改为 done，填写 implementation_notes 和 updated_at
-
-### 禁止事项
-
-- 不要修改 spec、context 等 Planner 填写的字段
-- 不要创建新任务（那是 Planner 的工作）
-- 不要将 status 改为 verified（那是 Planner 验收后才改的）
-EOF
-}
-
-init_project() {
-  mkdir -p .agent-memory
-
-  cat > ".agent-memory/agent-protocol.md" << EOF
+cat > ".agent-memory/agent-protocol.md" << EOF
 # Agent 协作协议（项目级个人配置）
 
 这是当前项目的个人私有配置，位于 \`.agent-memory/\` 下，不需要提交到团队仓库。
+
+协议来源：已安装的 \`agent-protocol\` skill。
 
 ## 项目角色
 
@@ -179,10 +69,14 @@ init_project() {
 
 ## 读取顺序
 
-1. 先读取 \`$PROTOCOL_DIR/PROTOCOL.md\`
-2. Planner 行为读取 \`$PROTOCOL_DIR/roles/planner.md\`
-3. Executor 行为读取 \`$PROTOCOL_DIR/roles/executor.md\`
-4. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
+1. 先读取已安装的 \`agent-protocol\` skill
+2. 再读取当前文件 \`.agent-memory/agent-protocol.md\`
+3. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
+
+## 角色分工
+
+- Planner：分析需求、设计方案、review 代码、创建 pending task、验收 done task。
+- Executor：认领 pending task、实现或修复、完成后改为 done 并填写 implementation_notes。
 
 ## 默认触发规则
 
@@ -210,7 +104,7 @@ Executor-only：
 
 Any-role：
 
-- \`/ap:init planner=<agent> executor=<agent>\`：初始化或更新个人协议文件和项目级个人配置。
+- \`/ap:init planner=<agent> executor=<agent>\`：初始化或更新项目级个人配置。
 - \`/ap:tasks\`：列出任务状态。
 - \`/ap:status\`：汇总任务统计和下一步建议。
 - \`/ap:help\`：显示命令帮助。
@@ -221,7 +115,7 @@ Any-role：
 
 - \`/ap:init\` 是配置命令，任意角色都可以执行。
 - 语法：\`/ap:init planner=<agent> executor=<agent>\`
-- 它可以创建或更新 \`~/.agent-protocol/\`、\`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`AGENTS.override.md\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
+- 它可以创建或更新 \`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`AGENTS.override.md\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
 - 它不实现业务代码，不完成 task，也不绕过角色门禁。
 - 如果未提供 planner/executor，优先沿用当前 \`.agent-memory/agent-protocol.md\` 中的项目角色；仍缺失时使用 Planner: Codex、Executor: Claude Code。
 
@@ -232,7 +126,7 @@ Any-role：
 - Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
 - 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
 - \`/ap:switch\` 不能绕过项目角色绑定。它只改变当前会话的解释视角，不能让非绑定 agent 执行副作用命令。
-- 如需修改项目角色绑定，重新运行：\`~/.agent-protocol/init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
+- 如需修改项目角色绑定，重新运行：\`/ap:init planner=<agent> executor=<agent>\` 或 \`./init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
 
 ## 项目规则
 
@@ -242,14 +136,12 @@ Any-role：
 - Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
 - \`.agent-memory/\` 是个人本地状态目录，应保持不提交
 EOF
-  project_config_message=".agent-memory/agent-protocol.md 已更新"
 
-  local entry_content
-  entry_content="## Agent 协作协议（项目级个人配置）
+entry_content="## Agent 协作协议（项目级个人配置）
 
 这是当前项目的个人私有配置入口，不需要提交到团队仓库。
 
-请先读取 \`.agent-memory/agent-protocol.md\`，再按其中的读取顺序和角色规则执行。
+请先读取已安装的 \`agent-protocol\` skill，再读取 \`.agent-memory/agent-protocol.md\`，并按其中的角色规则执行。
 
 默认行为：
 
@@ -262,55 +154,35 @@ EOF
 
 支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`, \`/ap:switch\`。
 
-\`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。
+\`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。"
 
-如果需要协议正文或角色说明：
+printf "%s\n" "$entry_content" > AGENTS.override.md
+printf "%s\n" "$entry_content" > CLAUDE.local.md
+mkdir -p .mastracode
+printf "%s\n" "$entry_content" > .mastracode/AGENTS.md
 
-- 协议：\`$PROTOCOL_DIR/PROTOCOL.md\`
-- Planner：\`$PROTOCOL_DIR/roles/planner.md\`
-- Executor：\`$PROTOCOL_DIR/roles/executor.md\`"
-
-  printf "%s\n" "$entry_content" > AGENTS.override.md
-  printf "%s\n" "$entry_content" > CLAUDE.local.md
-  mkdir -p .mastracode
-  printf "%s\n" "$entry_content" > .mastracode/AGENTS.md
-
-  if [ ! -f ".agent-memory/tasks.json" ]; then
-    printf '{"tasks": []}\n' > .agent-memory/tasks.json
-    tasks_message=".agent-memory/tasks.json 已创建"
-  else
-    tasks_message=".agent-memory/tasks.json 已保留"
-  fi
-
-  if [ -d ".git" ] && [ -f ".git/info/exclude" ]; then
-    add_git_exclude ".agent-memory/"
-    add_git_exclude "AGENTS.override.md"
-    add_git_exclude "CLAUDE.local.md"
-    add_git_exclude ".mastracode/AGENTS.md"
-    exclude_message=".git/info/exclude 已更新"
-  else
-    exclude_message=".git/info/exclude 未修改"
-  fi
-
-  echo "✓ 项目级个人配置已初始化/更新"
-  echo "  - AGENTS.override.md 已更新（Codex）"
-  echo "  - CLAUDE.local.md 已更新（Claude Code）"
-  echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
-  echo "  - $project_config_message"
-  echo "  - $tasks_message"
-  echo "  - $exclude_message"
-}
-
-add_git_exclude() {
-  local pattern="$1"
-
-  if ! grep -Fxq "$pattern" ".git/info/exclude"; then
-    printf "%s\n" "$pattern" >> ".git/info/exclude"
-  fi
-}
-
-install_protocol
-
-if [ "$PROJECT_MODE" -eq 1 ]; then
-  init_project
+if [ ! -f ".agent-memory/tasks.json" ]; then
+  printf '{"tasks": []}\n' > .agent-memory/tasks.json
+  tasks_message=".agent-memory/tasks.json 已创建"
+else
+  tasks_message=".agent-memory/tasks.json 已保留"
 fi
+
+if [ -d ".git" ] && [ -f ".git/info/exclude" ]; then
+  for pattern in ".agent-memory/" "AGENTS.override.md" "CLAUDE.local.md" ".mastracode/AGENTS.md"; do
+    if ! grep -Fxq "$pattern" ".git/info/exclude"; then
+      printf "%s\n" "$pattern" >> ".git/info/exclude"
+    fi
+  done
+  exclude_message=".git/info/exclude 已更新"
+else
+  exclude_message=".git/info/exclude 未修改"
+fi
+
+echo "✓ 项目级个人配置已初始化/更新"
+echo "  - AGENTS.override.md 已更新（Codex）"
+echo "  - CLAUDE.local.md 已更新（Claude Code）"
+echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
+echo "  - .agent-memory/agent-protocol.md 已更新"
+echo "  - $tasks_message"
+echo "  - $exclude_message"
