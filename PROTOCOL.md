@@ -2,8 +2,8 @@
 
 ## 角色分工
 
-- **Planner**（Codex）：负责分析、设计、review，输出任务
-- **Executor**（Claude Code）：负责实现、修复，更新任务状态
+- **Planner**（默认 Codex，可配置）：负责分析、设计、review，输出任务
+- **Executor**（默认 Claude Code，可配置）：负责实现、修复，更新任务状态
 
 ## 共享记忆位置
 

@@ -48,6 +48,7 @@ cd your-project
 
 这条命令会同时更新：
 
+- `~/.agent-protocol/PROTOCOL.md` 中的角色分工名称
 - `~/.agent-protocol/roles/planner.md` 中的 Planner 扮演者
 - `~/.agent-protocol/roles/executor.md` 中的 Executor 扮演者
 - 当前项目 `AGENTS.md` / `CLAUDE.md` 里的 Agent 名称
