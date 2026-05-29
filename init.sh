@@ -16,7 +16,11 @@ PLANNER_AGENT="Codex"
 EXECUTOR_AGENT="Claude Code"
 PROTOCOL_DIR="$HOME/.agent-protocol"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P 2>/dev/null || pwd)"
+if [ -n "${BASH_SOURCE[0]-}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P 2>/dev/null || pwd)"
+else
+  SCRIPT_DIR="$(pwd)"
+fi
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
