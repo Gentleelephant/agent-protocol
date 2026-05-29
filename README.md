@@ -37,10 +37,32 @@ cd your-project
 ~/.agent-protocol/init.sh --project --version v1.0
 ```
 
+## 切换 Agent 扮演者
+
+如果 Codex 或 Claude Code 暂时不可用，可以把 Planner / Executor 切换给其他 agent，例如 opencode：
+
+```bash
+cd your-project
+~/.agent-protocol/init.sh --project --planner-agent opencode --executor-agent opencode
+```
+
+这条命令会同时更新：
+
+- `~/.agent-protocol/roles/planner.md` 中的 Planner 扮演者
+- `~/.agent-protocol/roles/executor.md` 中的 Executor 扮演者
+- 当前项目 `AGENTS.md` / `CLAUDE.md` 里的 Agent 名称
+
+也可以只替换其中一个角色：
+
+```bash
+~/.agent-protocol/init.sh --project --planner-agent opencode
+~/.agent-protocol/init.sh --project --executor-agent opencode
+```
+
 ## 工作原理
 
-- Planner (Codex)：分析、设计、Review，输出任务到 `.agent-memory/tasks.json`
-- Executor (Claude Code)：读取任务，实现，更新状态
+- Planner（默认 Codex，可切换）：分析、设计、Review，输出任务到 `.agent-memory/tasks.json`
+- Executor（默认 Claude Code，可切换）：读取任务，实现，更新状态
 - `PROTOCOL.md` 是唯一维护协议约定的地方
 - `roles/planner.md` 和 `roles/executor.md` 分别定义两个 agent 的职责
 - 项目内的 `AGENTS.md` 和 `CLAUDE.md` 只引用协议文件，不重复维护协议正文
