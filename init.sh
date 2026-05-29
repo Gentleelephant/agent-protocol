@@ -6,18 +6,26 @@ set -euo pipefail
 #   初始化/更新项目: ~/.agent-protocol/init.sh --project
 #   指定版本:       ~/.agent-protocol/init.sh --project --version v1.0
 #   指定扮演者:     ~/.agent-protocol/init.sh --project --planner-agent opencode --executor-agent opencode
+#   安装 Codex Skill: ~/.agent-protocol/init.sh --install-codex-skill
 
 REPO_RAW="https://raw.githubusercontent.com/Gentleelephant/agent-protocol"
 VERSION="main"
 PROJECT_MODE=0
+INSTALL_CODEX_SKILL=0
 PLANNER_AGENT="Codex"
 EXECUTOR_AGENT="Claude Code"
 PROTOCOL_DIR="$HOME/.agent-protocol"
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P 2>/dev/null || pwd)"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --project)
       PROJECT_MODE=1
+      shift
+      ;;
+    --install-codex-skill)
+      INSTALL_CODEX_SKILL=1
       shift
       ;;
     --version)
@@ -58,6 +66,13 @@ install_protocol() {
   curl -fsSL "$REPO_RAW/$VERSION/roles/planner.md" -o "$PROTOCOL_DIR/roles/planner.md"
   curl -fsSL "$REPO_RAW/$VERSION/roles/executor.md" -o "$PROTOCOL_DIR/roles/executor.md"
   curl -fsSL "$REPO_RAW/$VERSION/schema/tasks.schema.json" -o "$PROTOCOL_DIR/schema/tasks.schema.json"
+  if ! curl -fsSL "$REPO_RAW/$VERSION/skills/agent-protocol/SKILL.md" -o "$PROTOCOL_DIR/agent-protocol.SKILL.md" 2>/dev/null; then
+    if [ -f "$SCRIPT_DIR/skills/agent-protocol/SKILL.md" ]; then
+      cp "$SCRIPT_DIR/skills/agent-protocol/SKILL.md" "$PROTOCOL_DIR/agent-protocol.SKILL.md"
+    else
+      rm -f "$PROTOCOL_DIR/agent-protocol.SKILL.md"
+    fi
+  fi
   curl -fsSL "$REPO_RAW/$VERSION/init.sh" -o "$PROTOCOL_DIR/init.sh"
   chmod +x "$PROTOCOL_DIR/init.sh"
   write_protocol_file
@@ -66,6 +81,20 @@ install_protocol() {
   echo "✓ 协议已安装: $PROTOCOL_DIR (version: $VERSION)"
   echo "  - Planner: $PLANNER_AGENT"
   echo "  - Executor: $EXECUTOR_AGENT"
+}
+
+install_codex_skill() {
+  local skill_dir="$CODEX_HOME/skills/agent-protocol"
+
+  if [ ! -f "$PROTOCOL_DIR/agent-protocol.SKILL.md" ]; then
+    echo "error: Codex Skill is not available in version $VERSION" >&2
+    exit 1
+  fi
+
+  mkdir -p "$skill_dir"
+  cp "$PROTOCOL_DIR/agent-protocol.SKILL.md" "$skill_dir/SKILL.md"
+
+  echo "✓ Codex Skill 已安装: $skill_dir"
 }
 
 write_protocol_file() {
@@ -235,4 +264,8 @@ install_protocol
 
 if [ "$PROJECT_MODE" -eq 1 ]; then
   init_project
+fi
+
+if [ "$INSTALL_CODEX_SKILL" -eq 1 ]; then
+  install_codex_skill
 fi

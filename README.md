@@ -15,6 +15,16 @@ cd your-project
 ~/.agent-protocol/init.sh --project
 ```
 
+## 安装 Codex Skill
+
+如果希望 Codex 更自然地触发 Planner/Executor 流程，可以安装随仓库提供的 skill：
+
+```bash
+~/.agent-protocol/init.sh --install-codex-skill
+```
+
+安装后，当你要求“规划需求”、“review 当前代码”、“创建 task”、“处理 `.agent-memory/tasks.json`”时，Codex 会优先按 agent-protocol 的 Planner/Executor 工作流执行。
+
 ## 已接入项目更新
 
 如果 `agent-protocol` 仓库更新了，先更新本机协议：
@@ -76,6 +86,7 @@ cd your-project
 - `roles/executor.md`：Claude Code/Executor 角色说明
 - `schema/tasks.schema.json`：任务文件 JSON Schema
 - `init.sh`：安装协议和初始化项目的脚本
+- `skills/agent-protocol/SKILL.md`：Codex Skill，用于降低协议使用摩擦
 
 ## 版本说明
 
