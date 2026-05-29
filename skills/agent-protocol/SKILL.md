@@ -68,26 +68,28 @@ If the user asks to directly implement a feature and does not mention protocol/t
 
 All protocol commands use the `/ap:` namespace to avoid collisions with agent-native commands.
 
+All parameters are optional. When a parameter is omitted, the command uses the default behavior described below. When a parameter is provided, it must follow the syntax shown; unsupported values should be rejected with a clear hint.
+
 Planner-only:
 
-- `/ap:review [scope]`: review code and create review tasks; do not edit production code.
-- `/ap:plan [requirement]`: analyze requirements or architecture and create feature/design tasks.
-- `/ap:task [summary]`: save the current discussion result as a pending task.
-- `/ap:verify [task-id|all]`: verify done tasks and mark valid tasks as verified.
+- `/ap:review [scope]`: review code and create review tasks; do not edit production code. Omitted scope means the entire project or current uncommitted changes. Scope examples: `src/auth/`, `pkg/db/`, `app/api.go`, `recent changes`, `all`.
+- `/ap:plan [requirement]`: analyze requirements or architecture and create feature/design tasks. Omitted requirement means extract from recent conversation context. Requirement examples: `add user login with JWT`, `migrate monolith to microservices`, `refactor payment module to clean architecture`.
+- `/ap:task [summary]`: save the current discussion result as a pending task. Omitted summary means summarize the most recent discussion topic. Summary examples: `fix N+1 query in order list page`, `add rate limiting to API gateway`, `replace hardcoded config with env vars`.
+- `/ap:verify [task-id|all]`: verify done tasks and mark valid tasks as verified. Omitted target defaults to `all`. Examples: `task-003`, `all`.
 
 Executor-only:
 
-- `/ap:execute [task-id|next]`: claim and execute pending tasks; omitted target means `next`.
-- `/ap:fix [task-id]`: fix a specific bug/review task; omitted target means the matching claimed or pending bug/review task.
-- `/ap:test [task-id]`: run verification and record results; omitted target means the current `in_progress` task.
-- `/ap:done [task-id]`: mark a task done and fill implementation notes; omitted target means the current `in_progress` task.
+- `/ap:execute [task-id|next]`: claim and execute pending tasks; omitted target means `next`. Examples: `task-005`, `next`.
+- `/ap:fix [task-id]`: fix a specific bug/review task; omitted target means the matching claimed (`in_progress`) or pending bug/review task. Examples: `task-002`, `task-007`.
+- `/ap:test [task-id]`: run verification and record results; omitted target means the current `in_progress` task. Examples: `task-004`, `task-004 --verbose`.
+- `/ap:done [task-id]`: mark a task done and fill implementation notes; omitted target means the current `in_progress` task. Examples: `task-004`.
 
 Any role:
 
-- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config.
-- `/ap:tasks [status]`: list tasks, optionally filtered by `pending`, `in_progress`, `blocked`, `done`, `verified`, or `cancelled`.
+- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. Agent examples: `Codex`, `Claude Code`, `mastracode`.
+- `/ap:tasks [status]`: list tasks. Omitted status lists all tasks. Status examples: `pending`, `in_progress`, `blocked`, `done`, `verified`, `cancelled`.
 - `/ap:status`: summarize task counts and next recommended action.
-- `/ap:help [command]`: show command help.
+- `/ap:help [command]`: show command help. Omitted command lists all commands with one-line summaries. Examples: `/ap:help review`, `/ap:help execute`.
 - `/ap:whoami`: show configured Planner and Executor for this project.
 
 ## Command Role Gate
