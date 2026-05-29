@@ -210,15 +210,24 @@ Executor-only：
 
 Any-role：
 
+- \`/ap:init planner=<agent> executor=<agent>\`：初始化或更新个人协议文件和项目级个人配置。
 - \`/ap:tasks\`：列出任务状态。
 - \`/ap:status\`：汇总任务统计和下一步建议。
 - \`/ap:help\`：显示命令帮助。
 - \`/ap:whoami\`：显示当前项目配置中的 Planner / Executor。
 - \`/ap:switch planner|executor\`：只切换当前会话视角，不修改项目配置。
 
+## /ap:init
+
+- \`/ap:init\` 是配置命令，任意角色都可以执行。
+- 语法：\`/ap:init planner=<agent> executor=<agent>\`
+- 它可以创建或更新 \`~/.agent-protocol/\`、\`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`AGENTS.override.md\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
+- 它不实现业务代码，不完成 task，也不绕过角色门禁。
+- 如果未提供 planner/executor，优先沿用当前 \`.agent-memory/agent-protocol.md\` 中的项目角色；仍缺失时使用 Planner: Codex、Executor: Claude Code。
+
 ## 命令角色门禁
 
-- 执行任何会产生副作用的 \`/ap:\` 命令前，先读取“项目角色”。
+- 除 \`/ap:init\` 外，执行任何会产生副作用的 \`/ap:\` 命令前，先读取“项目角色”。
 - Planner-only 命令只有当前 agent 与 \`Planner: $PLANNER_AGENT\` 匹配时才能执行。
 - Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
 - 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
@@ -251,9 +260,9 @@ EOF
 
 用户不需要显式说“按 agent-protocol”或“作为 Planner/Executor”。
 
-支持命令：\`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`, \`/ap:switch\`。
+支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`, \`/ap:switch\`。
 
-执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。
+\`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。
 
 如果需要协议正文或角色说明：
 

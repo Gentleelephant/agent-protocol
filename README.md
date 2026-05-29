@@ -80,12 +80,20 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/i
 
 2. 给 Codex、Claude Code、Mastra Code 分别安装 `skills/agent-protocol/SKILL.md`。
 
-3. 在项目里初始化个人配置：
+3. 在项目里初始化个人配置。可以继续使用脚本：
 
 ```bash
 cd your-project
 ~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
 ```
+
+也可以在已安装 skill 的任意 agent 中直接使用：
+
+```text
+/ap:init planner=Codex executor=mastracode
+```
+
+`/ap:init` 会创建或更新 `~/.agent-protocol/`、项目级个人入口、`.agent-memory/agent-protocol.md`、`.agent-memory/tasks.json` 和 `.git/info/exclude`。
 
 4. 让 Planner 创建任务。安装 skill 和项目入口后，不需要显式说“按 agent-protocol”，可以直接说：
 
@@ -136,6 +144,7 @@ Executor 命令：
 
 通用命令：
 
+- `/ap:init planner=<agent> executor=<agent>`
 - `/ap:tasks`
 - `/ap:status`
 - `/ap:help`
@@ -143,6 +152,8 @@ Executor 命令：
 - `/ap:switch planner|executor`
 
 命令会检查项目角色绑定。比如项目配置是 `Planner: Codex`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Codex 收到 `/ap:execute next` 时不能执行代码修改。
+
+`/ap:init` 是例外。它是配置命令，任意角色都可以执行，用来初始化或更新个人协议文件和项目级个人配置。
 
 `/ap:switch` 只切换当前会话视角，不修改项目配置，也不能绕过角色绑定执行副作用命令。
 

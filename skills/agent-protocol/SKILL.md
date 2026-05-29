@@ -75,6 +75,7 @@ Executor-only:
 
 Any role:
 
+- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config.
 - `/ap:tasks`: list tasks.
 - `/ap:status`: summarize task counts and next recommended action.
 - `/ap:help`: show command help.
@@ -83,14 +84,14 @@ Any role:
 
 ## Command Role Gate
 
-Before executing any `/ap:` command with side effects:
+Before executing any `/ap:` command with side effects, except `/ap:init`:
 
 1. Read `.agent-memory/agent-protocol.md`.
 2. Identify the configured `Planner` and `Executor`.
 3. Identify the current agent name from the project entry or runtime context.
 4. If the command is Planner-only, execute it only when the current agent matches the configured Planner.
 5. If the command is Executor-only, execute it only when the current agent matches the configured Executor.
-6. If the command is any-role, execute only the read-only behavior unless the user explicitly asks for a role-bound side effect.
+6. If the command is any-role, execute only the read-only behavior unless it is `/ap:init`.
 
 When roles do not match, do not create tasks, edit code, or change task status. Tell the user:
 
@@ -104,6 +105,69 @@ When roles do not match, do not create tasks, edit code, or change task status. 
 ```
 
 `/ap:switch` changes only current-session perspective. It must not bypass project role binding for side-effect commands.
+
+## Init Workflow
+
+`/ap:init` is a configuration command. Any agent may run it because it does not implement product code or complete protocol tasks.
+
+Syntax:
+
+```text
+/ap:init planner=<agent> executor=<agent>
+```
+
+Examples:
+
+```text
+/ap:init planner=Codex executor=mastracode
+/ap:init planner="Claude Code" executor=mastracode
+```
+
+If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Codex` and `Executor: Claude Code`, then report the defaults.
+
+When running `/ap:init`, create or update these personal protocol files:
+
+```text
+~/.agent-protocol/
+~/.agent-protocol/PROTOCOL.md
+~/.agent-protocol/roles/planner.md
+~/.agent-protocol/roles/executor.md
+~/.agent-protocol/schema/tasks.schema.json
+```
+
+Also create or update these project-local private files:
+
+```text
+.agent-memory/agent-protocol.md
+.agent-memory/tasks.json
+AGENTS.override.md
+CLAUDE.local.md
+.mastracode/AGENTS.md
+```
+
+If the current directory is a git repo, add these patterns to `.git/info/exclude` if missing:
+
+```text
+.agent-memory/
+AGENTS.override.md
+CLAUDE.local.md
+.mastracode/AGENTS.md
+```
+
+Do not edit team-shared project `AGENTS.md` or `CLAUDE.md`.
+
+`/ap:init` should preserve existing `.agent-memory/tasks.json`. Create it as `{"tasks": []}` only when it is missing.
+
+After init, summarize the configured Planner, Executor, created/updated files, and whether `.git/info/exclude` was updated.
+
+Init file content requirements:
+
+- `~/.agent-protocol/PROTOCOL.md`: include role split, `.agent-memory/tasks.json` as shared memory, task types, JSON task shape, `pending -> in_progress -> done -> verified`, and field ownership rules.
+- `~/.agent-protocol/roles/planner.md`: include Planner responsibilities, task creation rules, and the prohibition on editing product code during Planner work.
+- `~/.agent-protocol/roles/executor.md`: include Executor responsibilities, pending task claim flow, done status update, and Planner-owned field restrictions.
+- `.agent-memory/agent-protocol.md`: include configured Planner/Executor, read order, default trigger rules, `/ap:` command table, command role gate, and project-local privacy rules.
+- `AGENTS.override.md`, `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and require command role gate checks before side effects.
+- `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
 ## Planner Workflow
 
