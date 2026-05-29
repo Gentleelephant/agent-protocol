@@ -7,88 +7,51 @@ Claude Code、Mastra Code 之间的项目级个人协作协议。
 ```text
 agent-protocol/
 ├── skills/
-│   └── agent-protocol/          # 共享协议 skill
+│   └── agent-protocol/
 │       ├── SKILL.md             # 协议唯一来源（工作流、角色门禁、任务结构）
 │       ├── scripts/init.sh
-│       └── references/
-├── adapters/
-│   ├── claude/
-│   │   └── commands/
-│   │       ├── ap:done.md       # → /ap:done
-│   │       ├── ap:review.md     # → /ap:review
-│   │       └── ...
-│   └── mastracode/
-│       └── commands/
-│           └── ap/              # → /ap:<file>
-│               ├── done.md
+│       ├── references/
+│       └── adapters/            # 命令文件随 skill 分发
+│           ├── claude/commands/
+│           │   ├── ap:done.md   # → /ap:done
+│           │   ├── ap:review.md
+│           │   └── ...
+│           └── mastracode/commands/ap/
+│               ├── done.md      # → /ap:done
 │               ├── review.md
 │               └── ...
-├── scripts/install.sh           # 安装 /ap: 命令适配层（skill 由用户自行管理）
 └── README.md
 ```
 
 ## 核心模式
 
-`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令适配层只做一件事：把平台原生 slash command 映射到同一个 skill 工作流。
-
-- Claude Code：14 个 command 文件（`adapters/claude/commands/ap:*.md`），安装到 `~/.claude/commands/` 后暴露为 `/ap:xxx`。
-- Mastra Code：14 个 command 文件（`adapters/mastracode/commands/ap/*.md`），安装到 `.mastracode/commands/ap/` 后暴露为 `/ap:xxx`。
-- `/ap:init` 只初始化项目级个人配置和任务状态，不负责安装命令。
+`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令文件内嵌在 skill 中（`adapters/`），随 skill 一起分发。用户只需安装这一个 skill，首次使用时通过 `/ap:install` 安装命令，之后全程使用 `/ap:` 命令协作。
 
 ## 安装
 
-agent-protocol skill 由用户自行管理安装。`scripts/install.sh` 仅安装 `/ap:` 命令适配层。
+1. 安装 `agent-protocol` skill 到对应平台：
+   - Claude Code：将 `skills/agent-protocol/` 放到 `~/.claude/skills/`
+   - Mastra Code：将 `skills/agent-protocol/` 放到 `~/.mastracode/skills/`
 
-推荐通过 tag URL 直接执行远程脚本，无需克隆仓库：
-
-```bash
-# 安装 Claude Code 命令（用户级，所有项目可用）
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent claude --scope user
-
-# 安装 Mastra Code 命令
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent mastracode --scope user
-
-# 同时安装两个平台
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent all --scope user
-
-# 项目级安装（在项目目录下执行，安装到 .claude/ 或 .mastracode/）
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent claude --scope project
-```
-
-替换 `v3.4` 为所需的版本 tag。本地开发时可直接运行：
-
-```bash
-scripts/install.sh --agent claude --scope user
-scripts/install.sh --agent mastracode --scope user
-
-# 或安装到当前项目
-scripts/install.sh --agent claude --scope project
-scripts/install.sh --agent mastracode --scope project
-```
-
-### Claude Code
-
-安装脚本会创建：
+2. 在任一 agent 中执行：
 
 ```text
-~/.claude/commands/ap:init.md
-~/.claude/commands/ap:review.md
-...
+/ap:install
 ```
 
-项目级安装时对应目录是 `.claude/commands/`。
-
-### Mastra Code
-
-安装脚本会创建：
+首次执行会自动安装当前平台的所有 `/ap:` 命令。也可以显式指定平台：
 
 ```text
-~/.mastracode/commands/ap/init.md
-~/.mastracode/commands/ap/review.md
-...
+/ap:install claude
+/ap:install mastracode
+/ap:install all
 ```
 
-项目级安装时对应目录是 `.mastracode/`。Mastra Code 会按 `commands/ap/*.md` 目录结构识别 `/ap:init`、`/ap:review` 等命令。
+3. 初始化项目：
+
+```text
+/ap:init planner="Claude Code" executor=mastracode
+```
 
 ## 使用流程
 

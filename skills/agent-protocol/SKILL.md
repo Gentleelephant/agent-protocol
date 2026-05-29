@@ -87,6 +87,7 @@ Executor-only:
 Any role:
 
 - `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. Agent examples: `Claude Code`, `mastracode`.
+- `/ap:install [claude|mastracode|all]`: install /ap: custom commands for the specified platform. Omitted platform defaults to the current agent, detected from runtime context.
 - `/ap:tasks [status]`: list tasks. Omitted status lists all tasks. Status examples: `pending`, `in_progress`, `blocked`, `done`, `verified`, `cancelled`.
 - `/ap:status`: summarize task counts and next recommended action.
 - `/ap:help [command]`: show command help. Omitted command lists all commands with one-line summaries. Examples: `/ap:help review`, `/ap:help execute`.
@@ -94,7 +95,7 @@ Any role:
 
 ## Command Role Gate
 
-Before executing any `/ap:` command with side effects, except `/ap:init`:
+Before executing any `/ap:` command with side effects, except `/ap:init` and `/ap:install`:
 
 1. Read `.agent-memory/agent-protocol.md`.
 2. Identify the configured `Planner` and `Executor`.
@@ -162,6 +163,32 @@ Init file content requirements:
 - `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include configured Planner/Executor, skill as protocol source, project-local task paths, command role gate, and project-local privacy rules. Do not duplicate the full workflow from this skill.
 - `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and require command role gate checks before side effects.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
+
+## Install Workflow
+
+`/ap:install` is a configuration command. Any agent may run it because it only copies files, not implementing product code or completing protocol tasks.
+
+Syntax:
+
+```text
+/ap:install [claude|mastracode|all]
+```
+
+When platform is omitted, detect the current agent from runtime context and install commands for it.
+
+Workflow:
+
+1. Locate this skill's install directory. The command files live at `<skill-root>/adapters/`.
+2. Determine target platform: `claude`, `mastracode`, or `all`.
+3. Determine base directory from `--scope` (default: `project` for current directory, or `user` for `~/.claude` / `~/.mastracode`).
+   - Claude Code project scope: `.claude/commands/`
+   - Claude Code user scope: `~/.claude/commands/`
+   - Mastra Code project scope: `.mastracode/commands/ap/`
+   - Mastra Code user scope: `~/.mastracode/commands/ap/`
+4. Copy command files from `<skill-root>/adapters/<platform>/commands/` to the target directory.
+5. Report installed files and their target paths.
+
+After install, summarize which platform commands were installed and where.
 
 ## Planner Workflow
 
