@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["tasks"],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "status", "title", "spec"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^task-[0-9]+"
+          },
+          "type": {
+            "enum": ["review", "feature", "design", "bug"]
+          },
+          "status": {
+            "enum": ["pending", "in_progress", "done", "verified"]
+          },
+          "created_by": {
+            "enum": ["planner"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string"
+          },
+          "implementation_notes": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

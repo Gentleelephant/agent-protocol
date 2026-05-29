@@ -1,0 +1,49 @@
+# agent-protocol
+
+Codex 和 Claude Code 之间的标准化协作协议。
+
+## 安装
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
+```
+
+## 新项目接入
+
+```bash
+cd your-project
+~/.agent-protocol/init.sh --project
+```
+
+## 工作原理
+
+- Planner (Codex)：分析、设计、Review，输出任务到 `.agent-memory/tasks.json`
+- Executor (Claude Code)：读取任务，实现，更新状态
+- `PROTOCOL.md` 是唯一维护协议约定的地方
+- `roles/planner.md` 和 `roles/executor.md` 分别定义两个 agent 的职责
+- 项目内的 `AGENTS.md` 和 `CLAUDE.md` 只引用协议文件，不重复维护协议正文
+
+## 文件说明
+
+- `README.md`：项目说明和快速开始
+- `PROTOCOL.md`：Agent 协作协议正文
+- `roles/planner.md`：Codex/Planner 角色说明
+- `roles/executor.md`：Claude Code/Executor 角色说明
+- `schema/tasks.schema.json`：任务文件 JSON Schema
+- `init.sh`：安装协议和初始化项目的脚本
+
+## 版本说明
+
+默认安装 `main` 分支上的最新协议：
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
+```
+
+新项目可以锁定到指定版本：
+
+```bash
+~/.agent-protocol/init.sh --project --version v1.0
+```
+
+更新本地协议时，重新执行安装命令即可覆盖 `~/.agent-protocol` 下的协议文件。
