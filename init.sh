@@ -3,33 +3,21 @@ set -euo pipefail
 
 # 用法:
 #   安装/更新协议: curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/init.sh | bash
-#   初始化/更新项目: ~/.agent-protocol/init.sh --project
-#   指定版本:       ~/.agent-protocol/init.sh --project --version v1.0
-#   指定扮演者:     ~/.agent-protocol/init.sh --project --planner-agent opencode --executor-agent opencode
-#   安装 Codex Skill: ~/.agent-protocol/init.sh --install-codex-skill
+#   初始化/更新项目本地状态: ~/.agent-protocol/init.sh --project
+#   指定版本:             ~/.agent-protocol/init.sh --version v1.0
+#   指定扮演者:           ~/.agent-protocol/init.sh --planner-agent opencode --executor-agent opencode
 
 REPO_RAW="https://raw.githubusercontent.com/Gentleelephant/agent-protocol"
 VERSION="main"
 PROJECT_MODE=0
-INSTALL_CODEX_SKILL=0
 PLANNER_AGENT="Codex"
 EXECUTOR_AGENT="Claude Code"
 PROTOCOL_DIR="$HOME/.agent-protocol"
-CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-if [ -n "${BASH_SOURCE[0]-}" ]; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P 2>/dev/null || pwd)"
-else
-  SCRIPT_DIR="$(pwd)"
-fi
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --project)
       PROJECT_MODE=1
-      shift
-      ;;
-    --install-codex-skill)
-      INSTALL_CODEX_SKILL=1
       shift
       ;;
     --version)
@@ -70,35 +58,18 @@ install_protocol() {
   curl -fsSL "$REPO_RAW/$VERSION/roles/planner.md" -o "$PROTOCOL_DIR/roles/planner.md"
   curl -fsSL "$REPO_RAW/$VERSION/roles/executor.md" -o "$PROTOCOL_DIR/roles/executor.md"
   curl -fsSL "$REPO_RAW/$VERSION/schema/tasks.schema.json" -o "$PROTOCOL_DIR/schema/tasks.schema.json"
-  if ! curl -fsSL "$REPO_RAW/$VERSION/skills/agent-protocol/SKILL.md" -o "$PROTOCOL_DIR/agent-protocol.SKILL.md" 2>/dev/null; then
-    if [ -f "$SCRIPT_DIR/skills/agent-protocol/SKILL.md" ]; then
-      cp "$SCRIPT_DIR/skills/agent-protocol/SKILL.md" "$PROTOCOL_DIR/agent-protocol.SKILL.md"
-    else
-      rm -f "$PROTOCOL_DIR/agent-protocol.SKILL.md"
-    fi
-  fi
   curl -fsSL "$REPO_RAW/$VERSION/init.sh" -o "$PROTOCOL_DIR/init.sh"
   chmod +x "$PROTOCOL_DIR/init.sh"
   write_protocol_file
   write_role_files
+  write_personal_configs
 
   echo "✓ 协议已安装: $PROTOCOL_DIR (version: $VERSION)"
   echo "  - Planner: $PLANNER_AGENT"
   echo "  - Executor: $EXECUTOR_AGENT"
-}
-
-install_codex_skill() {
-  local skill_dir="$CODEX_HOME/skills/agent-protocol"
-
-  if [ ! -f "$PROTOCOL_DIR/agent-protocol.SKILL.md" ]; then
-    echo "error: Codex Skill is not available in version $VERSION" >&2
-    exit 1
-  fi
-
-  mkdir -p "$skill_dir"
-  cp "$PROTOCOL_DIR/agent-protocol.SKILL.md" "$skill_dir/SKILL.md"
-
-  echo "✓ Codex Skill 已安装: $skill_dir"
+  echo "✓ 个人级规则已更新"
+  echo "  - ~/.claude/CLAUDE.md"
+  echo "  - ~/.config/opencode/AGENTS.md"
 }
 
 write_protocol_file() {
@@ -201,14 +172,14 @@ write_managed_block() {
   local file="$1"
   local start_marker="$2"
   local end_marker="$3"
-  local legacy_role_file="$4"
-  local content="$5"
+  local content="$4"
   local tmp_file
 
   tmp_file="$(mktemp)"
+  mkdir -p "$(dirname "$file")"
   touch "$file"
 
-  awk -v start="$start_marker" -v end="$end_marker" -v legacy_role_file="$legacy_role_file" '
+  awk -v start="$start_marker" -v end="$end_marker" '
     $0 == start {
       skip_managed = 1
       next
@@ -217,15 +188,7 @@ write_managed_block() {
       skip_managed = 0
       next
     }
-    !skip_managed && $0 ~ /^## Agent 协作协议/ {
-      skip_legacy = 1
-      next
-    }
-    skip_legacy && index($0, legacy_role_file) {
-      skip_legacy = 0
-      next
-    }
-    !skip_managed && !skip_legacy {
+    !skip_managed {
       print
     }
   ' "$file" > "$tmp_file"
@@ -238,18 +201,30 @@ write_managed_block() {
   rm -f "$tmp_file"
 }
 
+write_personal_configs() {
+  local content
+
+  content="## Agent 协作协议（个人级）
+
+这是本机个人规则，不要求项目提交 AGENTS.md 或 CLAUDE.md。
+
+当当前项目存在 \`.agent-memory/tasks.json\`，或用户提到 agent-protocol、Planner、Executor、创建 task、处理 pending task、review 后交给另一个 agent 时：
+
+- 读取 \`$PROTOCOL_DIR/PROTOCOL.md\`
+- 需要 Planner 行为时读取 \`$PROTOCOL_DIR/roles/planner.md\`
+- 需要 Executor 行为时读取 \`$PROTOCOL_DIR/roles/executor.md\`
+- Planner 当前由 $PLANNER_AGENT 扮演
+- Executor 当前由 $EXECUTOR_AGENT 扮演
+- Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
+- Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
+- 不要依赖项目根目录的 AGENTS.md / CLAUDE.md 来启用本协议"
+
+  write_managed_block "$HOME/.claude/CLAUDE.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
+  write_managed_block "$HOME/.config/opencode/AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "$content"
+}
+
 init_project() {
   mkdir -p .agent-memory
-
-  write_managed_block "AGENTS.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "@file ~/.agent-protocol/roles/planner.md" "## Agent 协作协议 (version: $VERSION)
-Planner: $PLANNER_AGENT
-@file ~/.agent-protocol/PROTOCOL.md
-@file ~/.agent-protocol/roles/planner.md"
-
-  write_managed_block "CLAUDE.md" "<!-- agent-protocol:start -->" "<!-- agent-protocol:end -->" "@file ~/.agent-protocol/roles/executor.md" "## Agent 协作协议 (version: $VERSION)
-Executor: $EXECUTOR_AGENT
-协议详见 AGENTS.md，本文件角色为 Executor。
-@file ~/.agent-protocol/roles/executor.md"
 
   if [ ! -f ".agent-memory/tasks.json" ]; then
     printf '{"tasks": []}\n' > .agent-memory/tasks.json
@@ -258,18 +233,20 @@ Executor: $EXECUTOR_AGENT
     tasks_message=".agent-memory/tasks.json 已保留"
   fi
 
-  echo "✓ 项目已接入/更新协议"
-  echo "  - AGENTS.md 已更新（Planner/${PLANNER_AGENT}）"
-  echo "  - CLAUDE.md 已更新（Executor/${EXECUTOR_AGENT}）"
+  if [ -d ".git" ] && [ -f ".git/info/exclude" ] && ! grep -Fxq ".agent-memory/" ".git/info/exclude"; then
+    printf "\n# agent-protocol local state\n.agent-memory/\n" >> ".git/info/exclude"
+    exclude_message=".git/info/exclude 已加入 .agent-memory/"
+  else
+    exclude_message=".git/info/exclude 未修改"
+  fi
+
+  echo "✓ 项目本地状态已初始化/更新"
   echo "  - $tasks_message"
+  echo "  - $exclude_message"
 }
 
 install_protocol
 
 if [ "$PROJECT_MODE" -eq 1 ]; then
   init_project
-fi
-
-if [ "$INSTALL_CODEX_SKILL" -eq 1 ]; then
-  install_codex_skill
 fi

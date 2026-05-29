@@ -1,24 +1,27 @@
 ---
 name: agent-protocol
-description: Use when a project has agent-protocol enabled or the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor agents across Codex, Claude Code, opencode, or other agents.
+description: Use when the user asks to plan, review, create tasks, hand work to an executor, process .agent-memory/tasks.json, or coordinate Planner/Executor agents across coding agents using the personal agent-protocol installation.
 ---
 
 # Agent Protocol
 
-Use this skill to reduce friction when working in projects that use `agent-protocol`.
+Use this skill to reduce friction when working with the personal `agent-protocol` installation.
 
 ## Source Of Truth
 
-Before acting, inspect the project-level protocol files when present:
+Before acting, inspect these personal protocol files when present:
 
-- `AGENTS.md`
-- `CLAUDE.md`
-- `.agent-memory/tasks.json`
 - `~/.agent-protocol/PROTOCOL.md`
 - `~/.agent-protocol/roles/planner.md`
 - `~/.agent-protocol/roles/executor.md`
 
-If the project has not been initialized, tell the user to run:
+Use project files only for task state:
+
+- `.agent-memory/tasks.json`
+
+Do not require project-level `AGENTS.md` or `CLAUDE.md`; this protocol is intended to work from personal agent configuration.
+
+If the project has no task state and the user wants protocol handoff, tell the user to run:
 
 ```bash
 ~/.agent-protocol/init.sh --project
@@ -35,7 +38,7 @@ If the user asks for planning, review, task creation, or handoff, do not edit pr
 
 If the user asks to implement pending tasks or continue executor work, act as Executor.
 
-If the user asks to directly implement a feature and does not mention protocol/task handoff, follow normal coding behavior unless `AGENTS.md` explicitly requires protocol workflow.
+If the user asks to directly implement a feature and does not mention protocol/task handoff, follow normal coding behavior unless personal instructions explicitly require protocol workflow.
 
 ## Planner Workflow
 
