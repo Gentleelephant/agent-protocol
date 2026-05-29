@@ -192,6 +192,39 @@ init_project() {
 - 用户说验收、verify、检查 done task 时，默认进入 Planner：验证后把 done task 改为 verified。
 - 只有用户明确要求“直接实现”、“直接修改代码”、“不要创建 task”时，才跳过 Planner 创建 task 的默认行为。
 
+## /ap: 命令
+
+Planner-only：
+
+- \`/ap:review [scope]\`：审查代码并创建 review task，不直接改代码。
+- \`/ap:plan [requirement]\`：分析需求或架构方案，创建 feature/design task。
+- \`/ap:task [summary]\`：把当前讨论结果保存为 pending task。
+- \`/ap:verify [task-id|all]\`：验收 done task，通过则标记 verified。
+
+Executor-only：
+
+- \`/ap:execute [task-id|next]\`：认领并执行 pending task。
+- \`/ap:fix [task-id]\`：修复指定 bug/review task。
+- \`/ap:test [task-id]\`：运行验证并记录结果。
+- \`/ap:done [task-id]\`：标记任务 done 并填写实现说明。
+
+Any-role：
+
+- \`/ap:tasks\`：列出任务状态。
+- \`/ap:status\`：汇总任务统计和下一步建议。
+- \`/ap:help\`：显示命令帮助。
+- \`/ap:whoami\`：显示当前项目配置中的 Planner / Executor。
+- \`/ap:switch planner|executor\`：只切换当前会话视角，不修改项目配置。
+
+## 命令角色门禁
+
+- 执行任何会产生副作用的 \`/ap:\` 命令前，先读取“项目角色”。
+- Planner-only 命令只有当前 agent 与 \`Planner: $PLANNER_AGENT\` 匹配时才能执行。
+- Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
+- 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
+- \`/ap:switch\` 不能绕过项目角色绑定。它只改变当前会话的解释视角，不能让非绑定 agent 执行副作用命令。
+- 如需修改项目角色绑定，重新运行：\`~/.agent-protocol/init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
+
 ## 项目规则
 
 - 不要修改项目根目录的 \`AGENTS.md\` 或 \`CLAUDE.md\` 来启用本协议
@@ -217,6 +250,10 @@ EOF
 - 验收 / verify done task => Planner，改为 verified
 
 用户不需要显式说“按 agent-protocol”或“作为 Planner/Executor”。
+
+支持命令：\`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`, \`/ap:switch\`。
+
+执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。
 
 如果需要协议正文或角色说明：
 

@@ -116,6 +116,42 @@ verify task-001
 
 这些会默认触发 Planner 验收，并把通过的任务改为 `verified`。
 
+## /ap: 命令
+
+强触发命令使用 `/ap:` 前缀，避免和 agent 自带命令冲突。
+
+Planner 命令：
+
+- `/ap:review [scope]`
+- `/ap:plan [requirement]`
+- `/ap:task [summary]`
+- `/ap:verify [task-id|all]`
+
+Executor 命令：
+
+- `/ap:execute [task-id|next]`
+- `/ap:fix [task-id]`
+- `/ap:test [task-id]`
+- `/ap:done [task-id]`
+
+通用命令：
+
+- `/ap:tasks`
+- `/ap:status`
+- `/ap:help`
+- `/ap:whoami`
+- `/ap:switch planner|executor`
+
+命令会检查项目角色绑定。比如项目配置是 `Planner: Codex`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Codex 收到 `/ap:execute next` 时不能执行代码修改。
+
+`/ap:switch` 只切换当前会话视角，不修改项目配置，也不能绕过角色绑定执行副作用命令。
+
+修改项目角色绑定时重新运行：
+
+```bash
+~/.agent-protocol/init.sh --project --planner-agent Codex --executor-agent mastracode
+```
+
 ## Agent 入口文件
 
 Codex 读取：

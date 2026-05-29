@@ -55,6 +55,56 @@ If the user asks to implement pending tasks or continue executor work, act as Ex
 
 If the user asks to directly implement a feature and does not mention protocol/task handoff, follow normal coding behavior unless project-level personal instructions explicitly require protocol workflow.
 
+## Commands
+
+All protocol commands use the `/ap:` namespace to avoid collisions with agent-native commands.
+
+Planner-only:
+
+- `/ap:review [scope]`: review code and create review tasks; do not edit production code.
+- `/ap:plan [requirement]`: analyze requirements or architecture and create feature/design tasks.
+- `/ap:task [summary]`: save the current discussion result as a pending task.
+- `/ap:verify [task-id|all]`: verify done tasks and mark valid tasks as verified.
+
+Executor-only:
+
+- `/ap:execute [task-id|next]`: claim and execute pending tasks.
+- `/ap:fix [task-id]`: fix a specific bug/review task.
+- `/ap:test [task-id]`: run verification and record results.
+- `/ap:done [task-id]`: mark a task done and fill implementation notes.
+
+Any role:
+
+- `/ap:tasks`: list tasks.
+- `/ap:status`: summarize task counts and next recommended action.
+- `/ap:help`: show command help.
+- `/ap:whoami`: show configured Planner and Executor for this project.
+- `/ap:switch planner|executor`: switch current-session perspective only; do not modify project config.
+
+## Command Role Gate
+
+Before executing any `/ap:` command with side effects:
+
+1. Read `.agent-memory/agent-protocol.md`.
+2. Identify the configured `Planner` and `Executor`.
+3. Identify the current agent name from the project entry or runtime context.
+4. If the command is Planner-only, execute it only when the current agent matches the configured Planner.
+5. If the command is Executor-only, execute it only when the current agent matches the configured Executor.
+6. If the command is any-role, execute only the read-only behavior unless the user explicitly asks for a role-bound side effect.
+
+When roles do not match, do not create tasks, edit code, or change task status. Tell the user:
+
+- current agent role
+- required role for the command
+- configured agent that should run it
+- the command to change project binding:
+
+```bash
+~/.agent-protocol/init.sh --project --planner-agent <agent> --executor-agent <agent>
+```
+
+`/ap:switch` changes only current-session perspective. It must not bypass project role binding for side-effect commands.
+
 ## Planner Workflow
 
 1. Read protocol and planner role files.
