@@ -1,6 +1,7 @@
 ---
 name: agent-protocol
-description: Use when the user wants to coordinate multiple AI agents, set up Planner/Executor workflows, create or manage task handoff between agents, initialize agent collaboration config, review code for another agent to fix, or mentions task tracking, agent roles, multi-agent projects, /ap: commands, .agent-memory/tasks.json, or agent-protocol configuration.
+version: v3.4
+description: "Use when the user wants to coordinate Claude Code and Mastra Code, set up Planner/Executor workflows, create or manage task handoff between agents, initialize agent collaboration config, review code for another agent to fix, or mentions task tracking, agent roles, multi-agent projects, /ap: commands, .agent-memory/tasks.json, or agent-protocol configuration."
 ---
 
 # Agent Protocol
@@ -31,7 +32,6 @@ Use project-local private files for per-project behavior and task state:
 
 Do not require team-shared project `AGENTS.md` or `CLAUDE.md`. This protocol is intended to work from project-level personal entries that are ignored by Git:
 
-- `AGENTS.override.md` for Codex
 - `CLAUDE.local.md` for Claude Code
 - `.mastracode/AGENTS.md` for Mastra Code
 
@@ -86,7 +86,7 @@ Executor-only:
 
 Any role:
 
-- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. Agent examples: `Codex`, `Claude Code`, `mastracode`.
+- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. Agent examples: `Claude Code`, `mastracode`.
 - `/ap:tasks [status]`: list tasks. Omitted status lists all tasks. Status examples: `pending`, `in_progress`, `blocked`, `done`, `verified`, `cancelled`.
 - `/ap:status`: summarize task counts and next recommended action.
 - `/ap:help [command]`: show command help. Omitted command lists all commands with one-line summaries. Examples: `/ap:help review`, `/ap:help execute`.
@@ -129,18 +129,16 @@ Syntax:
 Examples:
 
 ```text
-/ap:init planner=Codex executor=mastracode
 /ap:init planner="Claude Code" executor=mastracode
 ```
 
-If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Codex` and `Executor: Claude Code`, then report the defaults.
+If `planner` or `executor` is omitted, use the existing value from `.agent-memory/agent-protocol.md` when present. If no existing value exists, use `Planner: Claude Code` and `Executor: mastracode`, then report the defaults.
 
 When running `/ap:init`, create or update these project-local private files:
 
 ```text
 .agent-memory/agent-protocol.md
 .agent-memory/tasks.json
-AGENTS.override.md
 CLAUDE.local.md
 .mastracode/AGENTS.md
 ```
@@ -149,7 +147,6 @@ If the current directory is a git repo, add these patterns to `.git/info/exclude
 
 ```text
 .agent-memory/
-AGENTS.override.md
 CLAUDE.local.md
 .mastracode/AGENTS.md
 ```
@@ -163,7 +160,7 @@ After init, summarize the configured Planner, Executor, created/updated files, a
 Init file content requirements:
 
 - `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include configured Planner/Executor, skill as protocol source, project-local task paths, command role gate, and project-local privacy rules. Do not duplicate the full workflow from this skill.
-- `AGENTS.override.md`, `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and require command role gate checks before side effects.
+- `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and require command role gate checks before side effects.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
 ## Planner Workflow

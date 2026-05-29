@@ -3,28 +3,20 @@ set -euo pipefail
 
 # 用法:
 #   初始化/更新当前项目级个人配置:
-#     skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
-#     skills/agent-protocol/scripts/init.sh --project planner=Codex executor=mastracode
+#     skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent mastracode
+#     skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor=mastracode
 #   通过远端脚本运行:
-#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
+#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent mastracode
 
 PROJECT_MODE=0
-PLANNER_AGENT="Codex"
-EXECUTOR_AGENT="Claude Code"
+PLANNER_AGENT="Claude Code"
+EXECUTOR_AGENT="mastracode"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --project)
       PROJECT_MODE=1
       shift
-      ;;
-    --version)
-      # Accepted for compatibility with older commands; the downloaded script version already fixes content.
-      if [ "$#" -lt 2 ]; then
-        echo "error: --version requires a value" >&2
-        exit 1
-      fi
-      shift 2
       ;;
     --planner-agent)
       if [ "$#" -lt 2 ]; then
@@ -110,9 +102,9 @@ Any-role：
 
 - \`/ap:init\` 是配置命令，任意角色都可以执行。
 - 语法：\`/ap:init planner=<agent> executor=<agent>\`
-- 它可以创建或更新 \`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`AGENTS.override.md\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
+- 它可以创建或更新 \`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
 - 它不实现业务代码，不完成 task，也不绕过角色门禁。
-- 如果未提供 planner/executor，优先沿用当前 \`.agent-memory/agent-protocol.md\` 中的项目角色；仍缺失时使用 Planner: Codex、Executor: Claude Code。
+- 如果未提供 planner/executor，优先沿用当前 \`.agent-memory/agent-protocol.md\` 中的项目角色；仍缺失时使用 Planner: Claude Code、Executor: mastracode。
 
 ## 命令角色门禁
 
@@ -149,7 +141,6 @@ entry_content="## Agent 协作协议（项目级个人配置）
 
 \`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。"
 
-printf "%s\n" "$entry_content" > AGENTS.override.md
 printf "%s\n" "$entry_content" > CLAUDE.local.md
 mkdir -p .mastracode
 printf "%s\n" "$entry_content" > .mastracode/AGENTS.md
@@ -162,7 +153,7 @@ else
 fi
 
 if [ -d ".git" ] && [ -f ".git/info/exclude" ]; then
-  for pattern in ".agent-memory/" "AGENTS.override.md" "CLAUDE.local.md" ".mastracode/AGENTS.md"; do
+  for pattern in ".agent-memory/" "CLAUDE.local.md" ".mastracode/AGENTS.md"; do
     if ! grep -Fxq "$pattern" ".git/info/exclude"; then
       printf "%s\n" "$pattern" >> ".git/info/exclude"
     fi
@@ -173,7 +164,6 @@ else
 fi
 
 echo "✓ 项目级个人配置已初始化/更新"
-echo "  - AGENTS.override.md 已更新（Codex）"
 echo "  - CLAUDE.local.md 已更新（Claude Code）"
 echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
 echo "  - .agent-memory/agent-protocol.md 已更新"

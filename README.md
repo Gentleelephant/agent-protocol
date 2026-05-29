@@ -1,65 +1,116 @@
 # agent-protocol
 
-Codex、Claude Code、Mastra Code 之间的项目级个人协作协议。
+Claude Code、Mastra Code 之间的项目级个人协作协议。
+
+## 项目结构
+
+仓库包含一个共享协议 skill，以及面向 Claude Code 和 Mastra Code 的命令适配层：
+
+```text
+agent-protocol/
+├── skills/
+│   └── agent-protocol/
+│       ├── SKILL.md             # 协议唯一来源（所有详细工作流）
+│       ├── scripts/init.sh
+│       └── references/
+│           ├── protocol.md
+│           ├── roles/planner.md
+│           ├── roles/executor.md
+│           └── schema/tasks.schema.json
+├── adapters/
+│   ├── claude/
+│   │   └── skills/
+│   │       ├── ap:init/SKILL.md # Claude Code 命令 skill，注册为 /ap:init
+│   │       ├── ap:review/SKILL.md
+│   │       └── ...
+│   └── mastracode/
+│       └── commands/
+│           └── ap/              # Mastra Code 命令，注册为 /ap:<file>
+│               ├── init.md
+│               ├── review.md
+│               └── ...
+├── scripts/install.sh           # 安装 /ap: 命令适配层（skill 由用户自行管理）
+└── README.md
+```
 
 ## 核心模式
 
-`skills/agent-protocol/SKILL.md` 是协议唯一来源。
+`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令适配层只做一件事：把平台原生 slash command 映射到同一个 skill 工作流。当前版本只支持 Claude Code 和 Mastra Code。
 
-Skill 目录是完整发布单元：
+- Claude Code 使用命令 skill：`adapters/claude/skills/ap:init/SKILL.md` 安装后注册为 `/ap:init`。
+- Mastra Code 使用 custom slash command：`adapters/mastracode/commands/ap/init.md` 安装后注册为 `/ap:init`。
+- 子命令目录在安装时创建；`/ap:init` 只初始化项目级个人配置和任务状态，不负责安装命令。
 
-```text
-skills/agent-protocol/
-  SKILL.md
-  scripts/init.sh
-  references/protocol.md
-  references/roles/planner.md
-  references/roles/executor.md
-  references/schema/tasks.schema.json
+## 安装
+
+agent-protocol skill 由用户自行管理安装。`scripts/install.sh` 仅安装 `/ap:` 命令适配层。
+
+推荐通过 tag URL 直接执行远程脚本，无需克隆仓库：
+
+```bash
+# 安装 Claude Code 命令（用户级，所有项目可用）
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent claude --scope user
+
+# 安装 Mastra Code 命令
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent mastracode --scope user
+
+# 同时安装两个平台
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent all --scope user
+
+# 项目级安装（在项目目录下执行，安装到 .claude/ 或 .mastracode/）
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/v3.4/scripts/install.sh | bash -s -- --agent claude --scope project
 ```
 
-你只需要把这个 skill 安装到 Codex、Claude Code、Mastra Code。之后在任意项目里使用：
+替换 `v3.4` 为所需的版本 tag。本地开发时可直接运行：
 
-```text
-/ap:init planner=Codex executor=mastracode
+```bash
+scripts/install.sh --agent claude --scope user
+scripts/install.sh --agent mastracode --scope user
+
+# 或安装到当前项目
+scripts/install.sh --agent claude --scope project
+scripts/install.sh --agent mastracode --scope project
 ```
 
-它会创建项目级个人配置和任务状态。
+### Claude Code
 
-## 项目文件
+安装脚本会创建：
 
-`/ap:init` 或可选脚本会创建：
+```text
+~/.claude/skills/ap:init/
+~/.claude/skills/ap:review/
+...
+```
 
-- `AGENTS.override.md`：Codex 项目级个人入口
-- `CLAUDE.local.md`：Claude Code 项目级个人入口
-- `.mastracode/AGENTS.md`：Mastra Code 项目级个人入口
-- `.agent-memory/agent-protocol.md`：项目级个人协议配置
-- `.agent-memory/tasks.json`：Planner / Executor 共享任务状态
-- `.git/info/exclude`：本地忽略上述个人配置和状态文件
+项目级安装时对应目录是 `.claude/skills/`。Claude Code 当前推荐用 skills 创建自定义命令；`ap:init` 这样的命令 skill 直接暴露为 `/ap:init`。
 
-这些文件不会提交到团队仓库。
+### Mastra Code
+
+安装脚本会创建：
+
+```text
+~/.mastracode/commands/ap/init.md
+~/.mastracode/commands/ap/review.md
+...
+```
+
+项目级安装时对应目录是 `.mastracode/`。Mastra Code 会按 `commands/ap/*.md` 目录结构识别 `/ap:init`、`/ap:review` 等命令。
 
 ## 使用流程
 
-1. 安装 skill：
+1. 在项目中初始化：
 
 ```text
-skills/agent-protocol/SKILL.md
-```
-
-2. 在项目中初始化：
-
-```text
-/ap:init planner=Codex executor=mastracode
+/ap:init planner="Claude Code" executor=mastracode
 ```
 
 也可以使用可选脚本：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
+curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent mastracode
 ```
 
-3. 创建任务：
+2. 创建任务：
 
 ```text
 review 当前代码
@@ -67,19 +118,31 @@ review 当前代码
 /ap:task 把刚才讨论的方案保存成任务
 ```
 
-4. 执行任务：
+3. 执行任务：
 
 ```text
 处理 pending task
 /ap:execute next
 ```
 
-5. 验收任务：
+4. 验收任务：
 
 ```text
 验收 done task
 /ap:verify all
 ```
+
+## 项目文件
+
+`/ap:init` 或可选脚本会创建：
+
+- `CLAUDE.local.md`：Claude Code 项目级个人入口
+- `.mastracode/AGENTS.md`：Mastra Code 项目级个人入口
+- `.agent-memory/agent-protocol.md`：项目级个人协议配置
+- `.agent-memory/tasks.json`：Planner / Executor 共享任务状态
+- `.git/info/exclude`：本地忽略上述个人配置和状态文件
+
+这些文件不会提交到团队仓库。
 
 ## 角色
 
@@ -105,7 +168,7 @@ Executor 负责：
 
 | 命令 | 角色 | 参数 | 可选值 / 格式 | 行为 |
 |---|---|---|---|---|
-| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Codex`、`Claude Code`、`mastracode`；含空格时用引号 | 初始化或更新项目级个人配置 |
+| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Claude Code`、`mastracode`；含空格时用引号 | 初始化或更新项目级个人配置 |
 | `/ap:review` | Planner | `[scope]` | 可省略；文件、目录、模块名或自然语言范围 | 审查代码并创建 `review` task，不直接改业务代码 |
 | `/ap:plan` | Planner | `[requirement]` | 需求描述、架构问题、设计目标 | 创建 `feature` 或 `design` task |
 | `/ap:task` | Planner | `[summary]` | 当前讨论结论或任务摘要 | 把讨论结果保存成 pending task |
@@ -119,7 +182,7 @@ Executor 负责：
 | `/ap:help` | 通用 | `[command]` | 任意 `/ap:` 命令名；省略显示全部帮助 | 显示命令帮助 |
 | `/ap:whoami` | 通用 | 无 | 无 | 显示当前项目配置的 Planner / Executor |
 
-除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Codex`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Codex 收到 `/ap:execute next` 时不能执行代码修改。
+除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Claude Code`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Claude Code 收到 `/ap:execute next` 时不能执行代码修改。
 
 如果要修改项目角色绑定，重新运行 `/ap:init planner=<agent> executor=<agent>`。
 
@@ -155,12 +218,6 @@ Executor 选择任务时，先按 `priority` 的 `high`、`medium`、`low` 排�
 
 ## Agent 入口文件
 
-Codex：
-
-```text
-AGENTS.override.md
-```
-
 Claude Code：
 
 ```text
@@ -182,6 +239,6 @@ Mastra Code：
 运行：
 
 ```bash
-skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
-skills/agent-protocol/scripts/init.sh --project planner=Codex executor=mastracode
+skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent mastracode
+skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor=mastracode
 ```

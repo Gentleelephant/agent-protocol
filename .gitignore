@@ -1,3 +1,5 @@
 # 本地测试产生的文件
 .agent-memory/
 *.local
+.idea/
+review.md

@@ -83,3 +83,14 @@ Executor 默认先处理 `high`，再处理 `medium`，最后处理 `low`。同�
 - `tasks.json` 非法：停止副作用操作，说明需要修复的位置。
 - task id 有间断：从最大编号继续递增。
 - 当前 agent 与项目角色绑定不一致：按项目绑定拒绝副作用命令，并提示应该使用哪个 agent。
+
+## 命令角色门禁
+
+除 `/ap:init` 外，执行任何会产生副作用的 `/ap:` 命令前，必须验证当前 agent 是否与项目配置的角色匹配：
+
+- Planner-only 命令（`review`、`plan`、`task`、`verify`）：仅 configured Planner 可执行。
+- Executor-only 命令（`execute`、`fix`、`test`、`done`）：仅 configured Executor 可执行。
+- 只读命令（`tasks`、`status`、`help`、`whoami`）：任意角色可执行。
+- 角色不匹配时：不创建 task、不修改代码、不改任务状态；告知用户当前角色和应使用的 agent。
+
+修改角色绑定：重新运行 `/ap:init planner=<agent> executor=<agent>`。
