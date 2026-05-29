@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.11
+version: v3.12
 description: "Use when the user wants to coordinate Claude Code and Mastra Code, set up Planner/Executor workflows, create or manage task handoff between agents, initialize agent collaboration config, review code for another agent to fix, or mentions task tracking, agent roles, multi-agent projects, /ap: commands, .agent-memory/tasks.json, or agent-protocol configuration."
 ---
 
@@ -173,15 +173,15 @@ When the user asks to install agent-protocol commands/subcommands (e.g. "安装�
 Workflow:
 
 1. Detect the current agent from runtime context (Claude Code vs Mastra Code).
-2. If the user specifies a platform (`claude`, `mastracode`, `all`), use that. Otherwise use the detected agent.
+2. If the user specifies a platform (`claude`, `mastracode`), install only that platform. Default: install both (`all`).
 3. Locate this skill's install directory. The command files live at `<skill-root>/adapters/`.
 4. Determine scope:
    - If the user mentions "user" or "global": install to user-level (`~/.claude/`, `~/.mastracode/`)
    - Default: install to project-level (`.claude/`, `.mastracode/`)
 5. Copy files:
-   - Claude Code: copy `<skill-root>/adapters/claude/commands/ap:*.md` to `<base>/commands/`
-   - Mastra Code: copy `<skill-root>/adapters/mastracode/commands/ap/*.md` to `<base>/commands/ap/`
-6. Report what was installed and where.
+   - Claude Code (when `claude` or `all`): copy `<skill-root>/adapters/claude/commands/ap:*.md` to `<base>/commands/`
+   - Mastra Code (when `mastracode` or `all`): copy `<skill-root>/adapters/mastracode/commands/ap/*.md` to `<base>/commands/ap/`
+6. Report what was installed and where, per platform.
 
 Do not create tasks for this action. Do not edit repository code. Do not run `/ap:init` unless the user also asked to initialize.
 
