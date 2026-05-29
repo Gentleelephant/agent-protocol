@@ -122,11 +122,10 @@ Executor：
 - `/ap:status`
 - `/ap:help`
 - `/ap:whoami`
-- `/ap:switch planner|executor`
 
 除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Codex`、`Executor: mastracode`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Codex 收到 `/ap:execute next` 时不能执行代码修改。
 
-`/ap:switch` 只切换当前会话视角，不修改项目配置，也不能绕过角色绑定执行副作用命令。
+如果要修改项目角色绑定，重新运行 `/ap:init planner=<agent> executor=<agent>`。
 
 ## Agent 入口文件
 
@@ -158,4 +157,5 @@ Mastra Code：
 
 ```bash
 skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
+skills/agent-protocol/scripts/init.sh --project planner=Codex executor=mastracode
 ```

@@ -12,13 +12,16 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^task-[0-9]+"
+            "pattern": "^task-[0-9]+$"
           },
           "type": {
             "enum": ["review", "feature", "design", "bug"]
           },
           "status": {
-            "enum": ["pending", "in_progress", "done", "verified"]
+            "enum": ["pending", "in_progress", "blocked", "done", "verified", "cancelled"]
+          },
+          "priority": {
+            "enum": ["high", "medium", "low"]
           },
           "created_by": {
             "enum": ["planner"]

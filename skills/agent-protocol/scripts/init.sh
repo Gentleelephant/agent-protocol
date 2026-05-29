@@ -4,6 +4,7 @@ set -euo pipefail
 # 用法:
 #   初始化/更新当前项目级个人配置:
 #     skills/agent-protocol/scripts/init.sh --project --planner-agent Codex --executor-agent mastracode
+#     skills/agent-protocol/scripts/init.sh --project planner=Codex executor=mastracode
 #   通过远端脚本运行:
 #     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent Codex --executor-agent mastracode
 
@@ -41,6 +42,14 @@ while [ "$#" -gt 0 ]; do
       EXECUTOR_AGENT="$2"
       shift 2
       ;;
+    planner=*)
+      PLANNER_AGENT="${1#planner=}"
+      shift
+      ;;
+    executor=*)
+      EXECUTOR_AGENT="${1#executor=}"
+      shift
+      ;;
     *)
       echo "error: unknown argument: $1" >&2
       exit 1
@@ -73,19 +82,6 @@ cat > ".agent-memory/agent-protocol.md" << EOF
 2. 再读取当前文件 \`.agent-memory/agent-protocol.md\`
 3. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
 
-## 角色分工
-
-- Planner：分析需求、设计方案、review 代码、创建 pending task、验收 done task。
-- Executor：认领 pending task、实现或修复、完成后改为 done 并填写 implementation_notes。
-
-## 默认触发规则
-
-- 用户说 review、审查、检查代码、找问题、安全问题、性能问题、设计问题时，默认进入 Planner：分析后把发现的问题追加为 pending task。
-- 用户说规划、设计方案、拆任务、需求分析、架构决策时，默认进入 Planner：追加 feature 或 design task。
-- 用户说处理 pending task、执行任务、实现 task、修复 task、继续 Executor 工作时，默认进入 Executor：认领 pending task，完成后改为 done。
-- 用户说验收、verify、检查 done task 时，默认进入 Planner：验证后把 done task 改为 verified。
-- 只有用户明确要求“直接实现”、“直接修改代码”、“不要创建 task”时，才跳过 Planner 创建 task 的默认行为。
-
 ## /ap: 命令
 
 Planner-only：
@@ -109,7 +105,6 @@ Any-role：
 - \`/ap:status\`：汇总任务统计和下一步建议。
 - \`/ap:help\`：显示命令帮助。
 - \`/ap:whoami\`：显示当前项目配置中的 Planner / Executor。
-- \`/ap:switch planner|executor\`：只切换当前会话视角，不修改项目配置。
 
 ## /ap:init
 
@@ -125,15 +120,13 @@ Any-role：
 - Planner-only 命令只有当前 agent 与 \`Planner: $PLANNER_AGENT\` 匹配时才能执行。
 - Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
 - 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
-- \`/ap:switch\` 不能绕过项目角色绑定。它只改变当前会话的解释视角，不能让非绑定 agent 执行副作用命令。
 - 如需修改项目角色绑定，重新运行：\`/ap:init planner=<agent> executor=<agent>\` 或 \`skills/agent-protocol/scripts/init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
 
 ## 项目规则
 
 - 不要修改项目根目录的 \`AGENTS.md\` 或 \`CLAUDE.md\` 来启用本协议
-- 不需要用户显式说“按 agent-protocol”或“作为 Planner/Executor”；根据默认触发规则自动选择角色
-- Planner 只追加 \`status: pending\` 的 task，不直接改业务代码
-- Executor 认领 pending task，完成后改为 \`done\` 并填写 \`implementation_notes\`
+- 不需要用户显式说“按 agent-protocol”或“作为 Planner/Executor”；根据 skill 中的默认触发规则自动选择角色
+- 具体工作流、任务状态、优先级、异常恢复规则以已安装的 \`agent-protocol\` skill 为准
 - \`.agent-memory/\` 是个人本地状态目录，应保持不提交
 EOF
 
@@ -152,7 +145,7 @@ entry_content="## Agent 协作协议（项目级个人配置）
 
 用户不需要显式说“按 agent-protocol”或“作为 Planner/Executor”。
 
-支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`, \`/ap:switch\`。
+支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`。
 
 \`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。"
 
