@@ -111,7 +111,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 - `/ap:review [scope]`
 - `/ap:plan [requirement]`
-- `/ap:execute [task-id|next|--origin review|plan]`
+- `/ap:execute [task-id|next|--origin review|plan|prompt|plan-artifact]`
 - `/ap:fix [task-id]`（兼容别名）
 - `/ap:clean [history|all]`
 - `/ap:init`
@@ -130,6 +130,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - 不要修改项目根目录的 `AGENTS.md` 或 `CLAUDE.md` 来启用本协议
 - 不需要用户显式说“按 agent-protocol”或声明角色
 - `/ap:plan` 和 `/ap:review` 必须把开发计划、review 结果和 execution prompt 持久化写入 `.agent-memory/artifacts/`
+- `/ap:execute` 接收直接 prompt 或 plan 文档时，必须先归一化为 task 和 artifact，再执行
 - 不支持子命令时，等价自然语言请求也必须写入同样的 `.agent-memory/artifacts/`
 - `.agent-memory/` 是个人本地状态目录，应保持不提交
 EOF

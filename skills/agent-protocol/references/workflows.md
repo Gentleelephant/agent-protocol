@@ -6,7 +6,7 @@ This file contains command details that are intentionally kept out of `SKILL.md`
 
 - `/ap:review [scope]`: review code and create review-derived tasks. Write a review artifact under `.agent-memory/artifacts/review/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:plan [requirement]`: analyze requirements and create feature/design tasks. Write a plan artifact under `.agent-memory/artifacts/plan/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
-- `/ap:execute [task-id|next|--origin review|plan]`: claim and implement pending tasks. Omitted target means `next`.
+- `/ap:execute [task-id|next|--origin review|plan|prompt|plan-artifact]`: claim and implement pending tasks. Omitted target means `next`. Direct prompt or plan input is first normalized into task/artifact state, then executed.
 - `/ap:fix [task-id]`: compatibility alias for `/ap:execute`.
 - `/ap:clean [history|all]`: clean `.agent-memory`. Omitted mode means `history`.
 - `/ap:init [--agent all|claude|mastracode|reasonix]`: initialize local protocol files and command adapters.
@@ -148,7 +148,12 @@ Use for `/ap:execute` and `/ap:fix`.
 2. Load `.agent-memory/tasks.json`; if missing, create `{"tasks": []}`, report no pending tasks, and stop unless the user also asked to initialize or create tasks.
 3. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
 4. Validate `tasks.json` when possible. Stop before side effects if invalid.
-5. Pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
+5. Normalize the execution target before claiming work:
+   - Existing task selector (`task-id`, `next`, `--origin review|plan`): pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
+   - Existing prompt artifact path or artifact id: find its `related_task_ids`; if they reference a pending task, use that task. If no task exists, create a pending task from the prompt, save or reference the prompt artifact, and set `prompt_artifact_id`.
+   - Direct pasted execution prompt: verify it contains the required execution prompt sections, write it under `.agent-memory/artifacts/prompt/`, create a pending task from its `Goal`, `Priority`, `Scope`, `Task Contract Snapshot`, and `Validation`, then use that task.
+   - Existing plan artifact path or artifact id: resolve any referenced task or prompt first. If the plan contains multiple executable items without a selected target, create/update only the missing pending tasks and report the choices instead of executing all of them implicitly.
+   - Direct pasted plan document: write it under `.agent-memory/artifacts/plan/`, split executable items into pending tasks, generate one execution prompt artifact per task, and execute only the selected task. If no single task is selected, report the created task ids and stop.
 6. Read `prompt_artifact_id` first when present; otherwise locate the execution prompt through `artifact_refs`.
 7. Read `origin_artifact_id` only when additional evidence is needed.
 8. Mark claimed tasks `in_progress`.
@@ -158,6 +163,8 @@ Use for `/ap:execute` and `/ap:fix`.
 12. Append the completion artifact reference, update `last_tested_at` when validation ran, fill `implementation_notes`, mark completed tasks `done`, and update `updated_at`.
 
 Do not modify task contract fields such as `spec`, `context`, `title`, or `created_by`.
+
+Direct prompt and plan input is a convenience entrypoint only. It must not bypass `.agent-memory/tasks.json`; before implementation, every executed unit of work must have a task id, an execution prompt artifact, and normal lifecycle updates.
 
 ## Cleanup Workflow
 

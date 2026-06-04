@@ -167,6 +167,9 @@ pending|blocked|in_progress → cancelled
 - `artifact` 保存完整结果，task 只保留摘要和引用
 - 开发计划、review 结果和 execution prompt 必须落盘保存，不能只留在对话上下文
 - task 应保存最小但关键的来源索引，执行 agent 不应被迫重新猜测 prompt 和来源 artifact
+- `/ap:execute` 可以接收直接粘贴的 execution prompt 或 plan 文档作为入口，但执行前必须先把输入归一化为 task 和 artifact；不能绕过 `tasks.json` 直接改代码
+- 直接 prompt 输入应保存到 `.agent-memory/artifacts/prompt/` 并创建或匹配一个 pending task；直接 plan 输入应保存到 `.agent-memory/artifacts/plan/`，再拆成 task 和对应 execution prompt
+- 如果 plan 文档包含多个可执行项且用户没有指定目标，只能创建或列出 task，不应隐式连续执行多个任务
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 

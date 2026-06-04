@@ -16,7 +16,7 @@ argument-hint: "[task-id]"
 
 ## 工作流
 
-1. 按 `/ap:execute [task-id|--origin review]` 的规则执行。
+1. 按 `/ap:execute [task-id|--origin review|prompt]` 的规则执行；如果传入的是修复 prompt，先归一化为 task 和 prompt artifact。
 2. 有参数时等价于 `/ap:execute <task-id>`。
 3. 省略参数时优先选择 `origin_command: "review"` 的活动 task。
 4. 新文档和新的 `command_hint` 应优先使用 `/ap:execute`，不要继续生成新的 `/ap:fix` 提示。

@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.21
+version: v3.22
 description: "Use only for explicit agent-protocol workflows: /ap:init, /ap:plan, /ap:review, /ap:execute, /ap:fix, /ap:clean, installing /ap commands, creating persistent agent handoff tasks/prompts, or Chinese requests that explicitly ask for agent-protocol handoff such as 按 agent-protocol, 生成可执行任务, 生成交接 prompt, 执行已有 task. Do not use for ordinary code review, debugging, planning, implementation, or code explanation unless the user explicitly asks to create protocol tasks/artifacts or use /ap."
 ---
 
@@ -51,7 +51,7 @@ Read only the file needed for the active command:
 - Install commands: refresh command adapters only. Read `references/workflows.md`; prefer `scripts/install-commands.sh`.
 - `/ap:plan`: inspect the requirement and project context, using Graphify first when available for cross-file orientation, then create tasks and write plan plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
 - `/ap:review`: inspect code, using Graphify first when available for broad scope review, then create actionable bug/design tasks and write review plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
-- `/ap:execute` or `/ap:fix`: pick the requested pending task, read only its prompt/source artifacts as needed, implement, verify, write completion artifact, and update state. Read `references/workflows.md`, `references/protocol.md`, and executor guidance.
+- `/ap:execute` or `/ap:fix`: pick the requested pending task, or normalize direct prompt/plan input into task and artifact state first, then implement, verify, write completion artifact, and update state. Read `references/workflows.md`, `references/protocol.md`, and executor guidance.
 - `/ap:clean`: clean `.agent-memory` history or reset it. Read `references/workflows.md`.
 
 ## Persistent State

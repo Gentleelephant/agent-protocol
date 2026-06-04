@@ -4,7 +4,7 @@
 
 - `/ap:plan`：根据用户需求和项目代码，生成开发计划和可执行 prompt
 - `/ap:review`：review 代码，输出 review 结果和修复 prompt
-- `/ap:execute`：执行 `/ap:plan` 或 `/ap:review` 生成的 task / prompt
+- `/ap:execute`：执行 `/ap:plan` 或 `/ap:review` 生成的 task / prompt；也可接收直接粘贴的 prompt 或 plan 文档，并先归一化为 task / artifact
 - `/ap:fix`：`/ap:execute` 的兼容别名，保留给 review 修复语义
 - `/ap:clean`：清理 `.agent-memory` 历史数据或重置本地协议状态
 
@@ -28,7 +28,7 @@
 
 如果项目中存在 `graphify-out/`，在 `/ap:plan` 或宽范围 `/ap:review` 中应优先用 graphify 图谱查询定位相关模块、文件和概念，再按需读取源码或文档确认事实。graphify 只作为检索索引，不接管 `.agent-memory` 状态流转。
 
-对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt；`/ap:execute` 默认仍按已生成 prompt 执行，避免实现阶段发散。
+对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt；`/ap:execute` 即使接收直接 prompt 或 plan 文档，也必须先归一化为 task / artifact，再进入实现阶段。
 
 无子命令兼容规则：
 
@@ -127,14 +127,22 @@
 
 ### `/ap:execute`
 
-输入：`plan` 或 `review` 生成的 task / prompt。
-行为：读取 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不扩散修改范围。
+输入：`plan` 或 `review` 生成的 task / prompt，也可以是直接粘贴的 execution prompt、prompt artifact、plan artifact 或 plan 文档。
+行为：先把输入归一化为 task 和 artifact，再读取 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不扩散修改范围。
 
 自然语言等价触发：
 
 - “执行刚才 plan 生成的第 2 条 prompt”
 - “按照这个开发 prompt 去实现”
 - “根据这个开发 prompt 继续做代码实现”
+
+直接 prompt / plan 输入规则：
+
+- 如果输入是已有 task、`next` 或 `--origin review|plan`，按现有 pending task 选择规则执行。
+- 如果输入是 prompt artifact 或直接粘贴的 execution prompt，先匹配 `related_task_ids`；没有匹配 task 时保存 prompt artifact，并创建一个 pending task。
+- 如果输入是 plan artifact 或直接粘贴的 plan 文档，先解析可执行项，保存 plan artifact，并为每个可执行项创建 task 和 execution prompt。
+- 如果 plan 中包含多个可执行项且用户没有指定目标，只创建或列出 task，不隐式连续执行全部任务。
+- 真正开始实现前，每个被执行的工作单元都必须有 task id、`prompt_artifact_id` 和正常状态流转记录。
 
 ### `/ap:fix`
 
