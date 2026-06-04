@@ -2,11 +2,12 @@ artifact_id: artifact-prompt-201
 artifact_type: execution_prompt
 command: /ap:review
 related_task_ids: [task-201]
+origin_artifact_id: artifact-review-201
 scope: [pkg/cache/store.go, pkg/cache/store_test.go]
 created_at: 2026-06-04T10:05:00Z
 created_by_role: agent
 agent: Codex
-command_hint: /ap:fix task-201
+command_hint: /ap:execute task-201
 target_role: implementing-agent
 summary: Fix missing lock coverage around cache map writes that can panic under concurrent access.
 
@@ -17,6 +18,17 @@ Fix the concurrent write bug in the cache store so writes and deletes are safe u
 ## Priority
 
 high
+
+## Source Context
+
+The review identified unsynchronized mutation paths in `pkg/cache/store.go` and marked them high risk because concurrent write panics can crash the process. The issue was confirmed by inspecting map write paths and the lack of matching lock coverage in targeted methods.
+
+## Task Contract Snapshot
+
+- Title: Fix concurrent map writes in cache store
+- Spec: Make cache writes and deletes safe under parallel access without changing the public API or eviction semantics.
+- Acceptance: Targeted tests pass, and race or concurrent write failures no longer reproduce in the scoped package.
+- Dependencies: none
 
 ## Scope
 
@@ -60,4 +72,4 @@ high
 
 ## Command Hint
 
-/ap:fix task-201
+/ap:execute task-201

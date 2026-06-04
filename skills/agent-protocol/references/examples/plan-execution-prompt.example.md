@@ -2,6 +2,7 @@ artifact_id: artifact-prompt-101
 artifact_type: execution_prompt
 command: /ap:plan
 related_task_ids: [task-101]
+origin_artifact_id: artifact-plan-101
 scope: [internal/auth/service.go, internal/auth/service_test.go, internal/http/login_handler.go]
 created_at: 2026-06-04T10:00:00Z
 created_by_role: agent
@@ -17,6 +18,17 @@ Implement a JWT login flow that validates username and password, issues a signed
 ## Priority
 
 high
+
+## Source Context
+
+The plan decomposition concluded that JWT login is currently incomplete but can be finished inside the existing auth and HTTP layers without schema changes or a package redesign. This task is first in dependency order because downstream authenticated requests rely on a valid token issuance path.
+
+## Task Contract Snapshot
+
+- Title: Add JWT-based login flow
+- Spec: Validate credentials, issue a signed JWT, and return it through the existing login API path.
+- Acceptance: Success path returns a token, invalid credentials fail with the expected error response, and focused auth/login tests pass.
+- Dependencies: none
 
 ## Scope
 

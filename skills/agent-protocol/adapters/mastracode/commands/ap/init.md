@@ -6,7 +6,7 @@ argument-hint: "[--agent all|claude|mastracode]"
 
 # /ap:init
 
-初始化或更新项目级个人协议配置。配置命令，任何 agent 均可执行。
+初始化或更新项目级个人协议配置。配置命令，任何 agent 均可执行。会一并安装 `/ap:clean`。
 
 ## 工作流
 

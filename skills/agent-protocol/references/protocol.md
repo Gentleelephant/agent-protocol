@@ -2,10 +2,8 @@
 
 ## 工作模式
 
-默认采用单 agent 工作流：
-
-- 同一个 agent 可以 review、plan、fix、execute，并在执行中自动完成验证和完成记录
-- 不区分 Planner / Executor 角色
+- 不要求显式声明角色
+- 任何 agent 都可以读取并推进 task 与 artifact
 
 ## 共享记忆位置
 
@@ -26,6 +24,14 @@
 
 这些类型表示“待执行工作”。不要把 `review_result`、`plan_record`、`execution_prompt`、`completion_record` 之类结果类型塞进 `task.type`。
 
+新任务应优先使用：
+
+- `bug`
+- `feature`
+- `design`
+
+`review` 保留给旧 task 兼容读取，不再推荐用于新建 task。
+
 ## 任务结构（JSON）
 
 ```json
@@ -38,8 +44,14 @@
   "title": "简短描述",
   "context": "背景和原因",
   "spec": "具体实现契约",
+  "origin_command": "review|plan",
+  "origin_artifact_id": "artifact-review-001",
+  "prompt_artifact_id": "artifact-prompt-001",
+  "source_summary": "任务来源摘要",
+  "acceptance": "验收标准摘要",
+  "depends_on": [],
   "implementation_notes": "实现备注摘要",
-  "artifact_refs": ["artifact-review-001"],
+  "artifact_refs": ["artifact-review-001", "artifact-prompt-001"],
   "last_reviewed_at": "",
   "last_tested_at": "",
   "created_at": "",
@@ -100,6 +112,7 @@ artifact_id:
 artifact_type: execution_prompt
 command:
 related_task_ids:
+origin_artifact_id:
 scope:
 created_at:
 created_by_role:
@@ -114,6 +127,8 @@ summary:
 ```text
 ## Goal
 ## Priority
+## Source Context
+## Task Contract Snapshot
 ## Scope
 ## Problem
 ## Constraints
@@ -127,6 +142,7 @@ summary:
 
 - `task.spec` 仍然是 task 的规范来源，prompt artifact 是给实现阶段直接使用的展开版说明。
 - prompt 不应与 `task.spec` 冲突；若冲突，以 `task.spec` 为准并回报不一致。
+- prompt 必须复制足够的 review 或 plan 摘要，不能要求执行 agent 仅靠会话上下文还原任务背景。
 - prompt 必须具体到文件、模块、行为和验证标准，不能只写笼统建议。
 - `/ap:plan` 和 `/ap:review` 无论通过子命令还是自然语言等价意图触发，都必须把对应 artifact 持久化写入 `.agent-memory/artifacts/`。
 
@@ -150,6 +166,7 @@ pending|blocked|in_progress → cancelled
 - `tasks.json` 是任务索引和状态流转的唯一来源
 - `artifact` 保存完整结果，task 只保留摘要和引用
 - 开发计划、review 结果和 execution prompt 必须落盘保存，不能只留在对话上下文
+- task 应保存最小但关键的来源索引，执行 agent 不应被迫重新猜测 prompt 和来源 artifact
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 

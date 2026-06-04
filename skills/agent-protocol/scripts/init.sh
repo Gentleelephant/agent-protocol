@@ -87,8 +87,8 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 ## 工作模式
 
-- 默认采用单 agent 工作流
-- 同一个 agent 可以 review、plan、fix、execute，并在执行中自动完成验证和完成记录
+- 不要求显式声明角色
+- 任何 agent 都可以读取并推进 task 与 artifact
 - 支持 `/ap:` 子命令时可以直接使用子命令
 - 不支持 `/ap:` 子命令时，必须把自然语言请求解释成等价命令意图
 
@@ -110,8 +110,9 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 - `/ap:review [scope]`
 - `/ap:plan [requirement]`
-- `/ap:execute [task-id|next]`
-- `/ap:fix [task-id]`
+- `/ap:execute [task-id|next|--origin review|plan]`
+- `/ap:fix [task-id]`（兼容别名）
+- `/ap:clean [history|all]`
 - `/ap:init`
 
 ## 自然语言等价意图
@@ -119,7 +120,8 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - “根据这个需求结合项目代码整理开发计划” => `plan`
 - “review 这段代码并给出修复 prompt” => `review`
 - “执行刚才 plan 产出的 prompt” => `execute`
-- “执行刚才 review 产出的修复 prompt” => `fix`
+- “执行刚才 review 产出的修复 prompt” => `execute`
+- “清理 .agent-memory 里的历史数据” => `clean`
 - 对不支持子命令的 agent，上述自然语言必须产出与 `/ap:` 相同的 task，并持久化保存到相同的 artifact 目录
 
 ## 项目规则
@@ -145,11 +147,11 @@ ENTRY_CONTENT=$(cat <<'EOF'
 - 规划 / 设计 / 拆任务 / 需求分析 => 创建 pending task、开发计划 artifact 和执行 prompt
 - 处理 pending task / 实现 task / 修复 task => 更新 task 状态、执行验证并记录完成结果
 
-同一个 agent 可以执行完整流程，不需要区分 Planner / Executor。
+不要求显式区分角色。任何 agent 都可以读取并推进 task 与 artifact。
 
 如果当前 agent 不支持 `/ap:` 子命令，就把上述意图当作自然语言工作流执行，并产出相同且持久化保存的 task 与 artifact。
 
-支持命令：`/ap:init`, `/ap:review`, `/ap:plan`, `/ap:execute`, `/ap:fix`。
+支持命令：`/ap:init`, `/ap:review`, `/ap:plan`, `/ap:execute`, `/ap:fix`, `/ap:clean`。
 EOF
 )
 

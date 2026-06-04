@@ -17,6 +17,9 @@
           "type": {
             "enum": ["review", "feature", "design", "bug"]
           },
+          "origin_command": {
+            "enum": ["review", "plan"]
+          },
           "status": {
             "enum": ["pending", "in_progress", "blocked", "done", "cancelled"]
           },
@@ -34,6 +37,24 @@
           },
           "spec": {
             "type": "string"
+          },
+          "origin_artifact_id": {
+            "type": "string"
+          },
+          "prompt_artifact_id": {
+            "type": "string"
+          },
+          "source_summary": {
+            "type": "string"
+          },
+          "acceptance": {
+            "type": "string"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "implementation_notes": {
             "type": "string"

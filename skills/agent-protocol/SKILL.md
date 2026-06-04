@@ -55,14 +55,15 @@ curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/s
 
 ## Core Workflow
 
-Treat this protocol as four primary commands and their handoff:
+Treat this protocol as three primary commands plus compatibility aliases:
 
 - `/ap:plan`: read the user requirement plus project code, then create development tasks and execution prompts
 - `/ap:review`: review code, then create review findings and fix prompts
-- `/ap:execute`: implement a prompt produced by `/ap:plan`
-- `/ap:fix`: implement a prompt produced by `/ap:review`
+- `/ap:execute`: implement a task produced by `/ap:plan` or `/ap:review`
+- `/ap:fix`: compatibility alias for `/ap:execute` when the task originated from review
+- `/ap:clean`: clean `.agent-memory` historical data
 
-Keep the public workflow minimal. Validation and completion recording should happen inside `/ap:execute` and `/ap:fix` rather than through extra public commands.
+Keep the public workflow minimal. Validation and completion recording should happen inside `/ap:execute` rather than through extra public commands.
 
 Agents that do not support subcommands, such as Codex, must still support this workflow. In those environments, interpret natural-language requests as command-equivalent intents rather than requiring literal `/ap:` syntax.
 
@@ -73,7 +74,8 @@ Default trigger rules:
 - User says install commands, install subcommands, install /ap: commands, install agent-protocol commands, 安装子命令: copy command files from this skill's adapters/ directory to the current agent's command path. See Install Workflow below.
 - User says review, audit, inspect, check code, find bugs, security issue, performance issue, design issue: run the `/ap:review` workflow.
 - User says plan, design, break down, analyze requirement, architecture decision: run the `/ap:plan` workflow.
-- User says process pending task, implement task, fix task, continue work: run the `/ap:execute` or `/ap:fix` workflow depending on task origin.
+- User says process pending task, implement task, fix task, continue work: run the `/ap:execute` workflow.
+- User says clean history, clean tasks, clean agent memory, 清理历史数据, 清理 .agent-memory: run the `/ap:clean` workflow.
 - User explicitly says directly implement, directly edit code, do not create tasks, or no protocol: follow normal coding behavior for that request.
 
 If the user asks to install agent-protocol commands or subcommands, copy the command files and report what was installed. Do not create tasks. See Install Workflow below.
@@ -89,7 +91,8 @@ Natural-language equivalence rules:
 - "根据这个需求结合项目代码整理开发计划" means `/ap:plan`
 - "review 这段代码并给出修复 prompt" means `/ap:review`
 - "执行刚才 plan 产出的 prompt" means `/ap:execute`
-- "执行刚才 review 产出的修复 prompt" means `/ap:fix`
+- "执行刚才 review 产出的修复 prompt" means `/ap:execute`
+- "清理 .agent-memory 里的历史数据" means `/ap:clean`
 - The same artifact, task, and prompt rules apply whether the trigger was `/ap:` syntax or natural language
 
 ## Commands
@@ -102,8 +105,9 @@ All parameters are optional. When a parameter is omitted, the command uses the d
 
 - `/ap:review [scope]`: review code and create review tasks; do not edit production code. Also write a review artifact under `.agent-memory/artifacts/review/` and a fix prompt artifact under `.agent-memory/artifacts/prompt/`. Omitted scope means the entire project or current uncommitted changes.
 - `/ap:plan [requirement]`: analyze requirements or architecture and create feature/design tasks. Also write a plan artifact under `.agent-memory/artifacts/plan/` and an execution prompt artifact under `.agent-memory/artifacts/prompt/`. Omitted requirement means extract from recent conversation context.
-- `/ap:execute [task-id|next]`: claim and execute pending tasks; omitted target means `next`.
-- `/ap:fix [task-id]`: fix a specific bug/review task; omitted target means the matching claimed (`in_progress`) or pending bug/review task.
+- `/ap:execute [task-id|next|--origin review|plan]`: claim and execute pending tasks; omitted target means `next`. `--origin` narrows selection when the user wants only review-derived or plan-derived work.
+- `/ap:fix [task-id]`: compatibility alias for `/ap:execute`. Preserve it for existing habits, but prefer `/ap:execute`.
+- `/ap:clean [history|all]`: clean `.agent-memory` historical data. Omitted mode means `history`. `all` resets `.agent-memory` to an initialized empty state.
 - `/ap:init`: initialize or update personal protocol files, project-local private config, and project-level `/ap:` subcommands.
 
 By default, only `/ap:` command flows persist artifacts. Equivalent natural-language requests may create or update tasks, but should not silently create artifact files unless they are handled through the protocol path.
@@ -119,7 +123,7 @@ Before executing any `/ap:` command with side effects, except `/ap:init`:
 1. Read `.agent-memory/agent-protocol.md` when present.
 2. Use `tasks.json` as the task state source of truth.
 3. Use `.agent-memory/artifacts/` as the detailed evidence and prompt store.
-4. Do not block execution based on agent identity. The same agent may review, plan, fix, execute, test, verify, and mark done.
+4. Do not block execution based on agent identity.
 5. Do not require role-specific configuration to run the workflow.
 
 ## Init Workflow
@@ -185,9 +189,9 @@ After init, summarize the selected agent scope, the created vs skipped files, an
 
 Init file content requirements:
 
-- `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include skill as protocol source, project-local task paths, single-agent-friendly execution rules, and project-local privacy rules.
+- `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include skill as protocol source, project-local task paths, execution rules, and project-local privacy rules.
 - `.agent-memory/artifacts/`: create review/plan/prompt/done subdirectories for persistent command artifacts.
-- `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and state that one agent may perform the full workflow.
+- `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, and list `/ap:` commands.
 - `.claude/commands/`, `.mastracode/commands/ap/`: install the packaged `/ap:` command adapters for the selected agent target.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
@@ -231,11 +235,14 @@ Rules:
 - Keep `task.spec` as the canonical short task contract; the prompt artifact is the expanded execution brief.
 - If the prompt and `task.spec` conflict, the implementing agent should treat `task.spec` as source of truth and report the mismatch.
 - Prefer one prompt per independent problem or feature slice. Do not bundle unrelated work into one prompt.
+- Copy the decisive review or plan context into the prompt itself instead of requiring another agent to re-open every source artifact.
 
 Required prompt sections:
 
 - `Goal`
 - `Priority`
+- `Source Context`
+- `Task Contract Snapshot`
 - `Scope`
 - `Problem`
 - `Constraints`
@@ -247,6 +254,8 @@ Required prompt sections:
 Prompt quality requirements:
 
 - `Problem` must state current behavior, expected behavior, and why it matters.
+- `Source Context` must summarize the relevant review finding or planning rationale, with the key evidence or dependency notes needed to act.
+- `Task Contract Snapshot` must restate the canonical task contract fields that execution depends on.
 - `Scope` must identify the allowed change surface as specifically as possible.
 - `Constraints` must list explicit non-goals and forbidden changes.
 - `Suggested Fix` must recommend a preferred implementation path, not generic advice.
@@ -261,6 +270,7 @@ artifact_id:
 artifact_type: execution_prompt
 command:
 related_task_ids:
+origin_artifact_id:
 scope:
 created_at:
 created_by_role:
@@ -282,7 +292,8 @@ summary:
 8. Fill `id`, `type`, `priority`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
 9. For `/ap:review` and `/ap:plan`, also write a Markdown artifact under `.agent-memory/artifacts/` and store its identifier in `artifact_refs`.
 10. For each actionable task created by `/ap:review` or `/ap:plan`, also write an `execution_prompt` artifact under `.agent-memory/artifacts/prompt/` and store its identifier in `artifact_refs`.
-11. Do not fill `implementation_notes` unless preserving an existing value.
+11. For new tasks, also fill `origin_command`, `origin_artifact_id`, `prompt_artifact_id`, `source_summary`, `acceptance`, and `depends_on` whenever that information is known.
+12. Do not fill `implementation_notes` unless preserving an existing value.
 
 New tasks must always include `priority` and `artifact_refs`; task consumers rely on them for ordering and prompt lookup.
 
@@ -301,6 +312,7 @@ Prompt generation rules for `/ap:review`:
 - State the observed issue first, then the repair direction.
 - Include severity or priority in the task and prompt.
 - If evidence is incomplete, say what must be confirmed before implementation.
+- New tasks created from review should normally use `type: "bug"`. The legacy `review` task type may still exist in old task files and should remain readable.
 
 ## Implementation Workflow
 
@@ -309,17 +321,43 @@ Prompt generation rules for `/ap:review`:
 3. Ensure `.agent-memory/artifacts/` and the relevant subdirectory for the command exist.
 4. Validate the task file against `references/schema/tasks.schema.json` when possible. If it is invalid, report the problem and do not claim tasks until it is repaired.
 5. Pick pending tasks relevant to the user's request. If several match, sort by `priority` and then by `created_at` ascending.
-6. If the task has an `execution_prompt` artifact, read it first. If it conflicts with `task.spec`, use `task.spec`.
-7. Change claimed tasks to `in_progress`.
-8. Implement or fix according to `spec` and any related prompt artifact.
-9. Run appropriate verification.
-10. Write a completion artifact under `.agent-memory/artifacts/done/` that includes the implementation summary and validation results.
-11. Append the completion artifact reference, update `last_tested_at` when validation ran, and fill `implementation_notes`.
-12. Change completed tasks to `done` and update `updated_at`.
+6. If the task has `prompt_artifact_id`, read it first. Otherwise fall back to locating the `execution_prompt` through `artifact_refs`. If the prompt conflicts with `task.spec`, use `task.spec`.
+7. If the task has `origin_artifact_id`, read it when additional review or planning evidence is needed.
+8. Change claimed tasks to `in_progress`.
+9. Implement or fix according to `spec` and any related prompt artifact.
+10. Run appropriate verification.
+11. Write a completion artifact under `.agent-memory/artifacts/done/` that includes the implementation summary and validation results.
+12. Append the completion artifact reference, update `last_tested_at` when validation ran, and fill `implementation_notes`.
+13. Change completed tasks to `done` and update `updated_at`.
 
 Do not modify task contract fields such as `spec`, `context`, `title`, or `created_by`.
 
-Verification is part of `/ap:execute` and `/ap:fix`. Do not rely on a separate public verification command.
+Verification is part of `/ap:execute`. Do not rely on a separate public verification command.
+
+## Cleanup Workflow
+
+`/ap:clean` is a maintenance command for `.agent-memory/`.
+
+Modes:
+
+- `history` (default): remove historical data while preserving active work
+- `all`: reset `.agent-memory` to an initialized empty state
+
+`history` mode rules:
+
+1. Read `.agent-memory/tasks.json`.
+2. Keep tasks with status `pending`, `in_progress`, or `blocked`.
+3. Remove tasks with status `done` or `cancelled`.
+4. Delete completion artifacts under `.agent-memory/artifacts/done/`.
+5. Delete review, plan, and prompt artifacts that are referenced only by removed terminal tasks.
+6. Preserve `.agent-memory/agent-protocol.md` and directory structure.
+
+`all` mode rules:
+
+1. Preserve `.agent-memory/agent-protocol.md`.
+2. Reset `.agent-memory/tasks.json` to `{"tasks": []}`.
+3. Empty `.agent-memory/artifacts/review/`, `plan/`, `prompt/`, and `done/`.
+4. Preserve the artifact directory structure so the next protocol command can reuse it immediately.
 
 ## Task JSON Shape
 
@@ -335,8 +373,14 @@ Use this shape for new tasks:
   "title": "Short actionable title",
   "context": "Why this task exists.",
   "spec": "Concrete implementation contract.",
+  "origin_command": "plan",
+  "origin_artifact_id": "artifact-plan-001",
+  "prompt_artifact_id": "artifact-prompt-001",
+  "source_summary": "Why this task was created.",
+  "acceptance": "Observable acceptance criteria.",
+  "depends_on": [],
   "implementation_notes": "",
-  "artifact_refs": ["artifact-review-001"],
+  "artifact_refs": ["artifact-plan-001", "artifact-prompt-001"],
   "last_reviewed_at": "YYYY-MM-DDTHH:MM:SSZ",
   "last_tested_at": "YYYY-MM-DDTHH:MM:SSZ",
   "created_at": "YYYY-MM-DDTHH:MM:SSZ",
@@ -350,6 +394,8 @@ Allowed task types:
 - `feature`
 - `design`
 - `bug`
+
+Use `bug`, `feature`, or `design` for new tasks. Keep `review` readable for backward compatibility only.
 
 Artifact types are separate from task types:
 
@@ -377,6 +423,7 @@ Read state from `tasks.json` first. Read details from referenced artifacts.
 - If a task is blocked, set `status: "blocked"` and explain the blocker in `implementation_notes`.
 - If a blocked task becomes actionable, the implementing agent may move it back to `in_progress`.
 - If an `artifact_refs` entry points to a missing file, warn in read-only output but do not fail the command.
+- If `origin_artifact_id` or `prompt_artifact_id` is missing, fall back to `artifact_refs` and report the weaker linkage.
 
 ## User-Facing Behavior
 

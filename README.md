@@ -1,27 +1,26 @@
 # agent-protocol
 
-一个围绕 4 个核心命令组织的 agent 协议：
+一个围绕 3 个核心命令和 2 个辅助命令组织的 agent 协议：
 
 - `/ap:plan`：根据用户需求和项目代码，生成开发计划和可执行 prompt
 - `/ap:review`：review 代码，输出 review 结果和修复 prompt
-- `/ap:execute`：执行 `/ap:plan` 生成的 prompt
-- `/ap:fix`：执行 `/ap:review` 生成的 prompt
-
-默认是单 agent 工作流。同一个 agent 可以从分析一直做到执行和验收。
+- `/ap:execute`：执行 `/ap:plan` 或 `/ap:review` 生成的 task / prompt
+- `/ap:fix`：`/ap:execute` 的兼容别名，保留给 review 修复语义
+- `/ap:clean`：清理 `.agent-memory` 历史数据或重置本地协议状态
 
 对于不支持子命令的 agent，例如 Codex，也必须支持。做法不是依赖 `/ap:` 语法，而是把这些命令视为自然语言意图：
 
 - “根据这个需求结合项目代码整理开发计划” = `/ap:plan`
 - “review 这段代码并给出修复 prompt” = `/ap:review`
 - “执行刚才 plan 产出的 prompt” = `/ap:execute`
-- “执行刚才 review 产出的修复 prompt” = `/ap:fix`
+- “执行刚才 review 产出的修复 prompt” = `/ap:execute`
 
 ## 核心结构
 
 主线只有两条：
 
 1. 需求实现链路：`plan -> execute`
-2. 代码修复链路：`review -> fix`
+2. 代码修复链路：`review -> execute`
 
 无子命令兼容规则：
 
@@ -62,10 +61,19 @@
 - `/ap:review` 为每个问题生成一个修复 prompt
 - `/ap:plan` 和 `/ap:review` 生成的开发计划、review 结果和 prompt 必须持久化保存到 `.agent-memory/artifacts/`
 - 不支持 `/ap:` 子命令的 agent 走自然语言等价流程时，也必须保存到同样的位置
-- `/ap:execute` 和 `/ap:fix` 优先读取关联 prompt，并在执行后自动完成验证与完成记录
+- `/ap:execute` 优先读取关联 prompt，并在执行后自动完成验证与完成记录
 - 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
 
-## 四个核心命令
+同时，task 本身也要带上最小但关键的来源索引，至少包括：
+
+- `origin_command`
+- `origin_artifact_id`
+- `prompt_artifact_id`
+- `source_summary`
+- `acceptance`
+- `depends_on`
+
+## 命令
 
 ### `/ap:plan`
 
@@ -107,12 +115,12 @@
 - 复现或观察依据
 - 修复建议
 - 验收方式
-- 推荐执行命令，通常是 `/ap:fix <review-prompt>`
+- 推荐执行命令，通常是 `/ap:execute <task-id>`
 
 ### `/ap:execute`
 
-输入：`plan` 生成的 prompt。
-行为：读取 prompt，并按约束实现需求，不扩散修改范围。
+输入：`plan` 或 `review` 生成的 task / prompt。
+行为：读取 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不扩散修改范围。
 
 自然语言等价触发：
 
@@ -122,14 +130,21 @@
 
 ### `/ap:fix`
 
-输入：`review` 生成的 prompt。
-行为：读取 prompt，针对问题修复，不顺手做无关重构。
+兼容别名：等价于 `/ap:execute`，但保留给“修复 review 问题”的使用习惯。
 
 自然语言等价触发：
 
 - “修复刚才 review 的第 1 个问题”
 - “按照这个修复 prompt 改代码”
 - “执行这条 review 修复建议”
+
+### `/ap:clean`
+
+输入：`history` 或 `all`。
+行为：
+
+- `history`：保留活动 task，删除 `done` / `cancelled` task 和对应历史 artifact
+- `all`：保留目录结构与 `agent-protocol.md`，把 `.agent-memory` 重置为初始化后的空状态
 
 ## Prompt 质量规则
 
@@ -155,6 +170,8 @@
 
 - `Goal`
 - `Priority`
+- `Source Context`
+- `Task Contract Snapshot`
 - `Scope`
 - `Problem`
 - `Constraints`
@@ -171,6 +188,8 @@
 补充要求：
 
 - `Priority` 只能用 `high` / `medium` / `low`
+- `Source Context` 必须复制 review 结论或计划依据的关键摘要
+- `Task Contract Snapshot` 必须重述 task 的 `spec`、`acceptance` 和依赖信息
 - `Scope` 必须尽量落到具体文件、目录、模块、接口
 - `Constraints` 必须写出禁止项
 - `Suggested Fix` 必须优先写推荐方案，避免给一堆无排序选项
@@ -197,6 +216,7 @@
 - 每个 prompt 只处理一个独立问题，避免混合多个问题
 - 明确这是 bug fix、风险修复，还是行为校正
 - 如果问题信息不足，prompt 要写明需要先确认什么
+- review 产出的新 task 应优先使用 `bug` 类型，而不是 `review`
 
 ## 初始化
 
@@ -206,7 +226,6 @@
 /ap:init
 ```
 
-`/ap:init` 不接受额外角色参数，协议默认就是单 agent 模式。
 执行后会同时完成两件事：
 
 - 初始化 `.agent-memory/`
@@ -216,7 +235,7 @@ Claude Code 入口规则：
 
 - `skills/ap:init/SKILL.md` 是默认 bootstrap 入口
 - 这个入口只负责把 `/ap:init` 暴露给 Claude，并转发到主 `agent-protocol` skill 的 Init Workflow
-- 其他 `/ap:plan`、`/ap:review`、`/ap:execute`、`/ap:fix` 仍然通过 `init.sh` 或 `install-commands.sh` 安装到项目目录或用户目录
+- 其他 `/ap:plan`、`/ap:review`、`/ap:execute`、`/ap:fix`、`/ap:clean` 仍然通过 `init.sh` 或 `install-commands.sh` 安装到项目目录或用户目录
 
 脚本参数：
 

@@ -2,11 +2,12 @@ artifact_id: artifact-prompt-<id>
 artifact_type: execution_prompt
 command: /ap:review|/ap:plan
 related_task_ids: [task-<id>]
+origin_artifact_id: artifact-review-<id>|artifact-plan-<id>
 scope: <files-or-modules>
 created_at: <ISO-8601>
 created_by_role: agent
 agent: <agent-name>
-command_hint: /ap:fix <task-id> | /ap:execute <task-id>
+command_hint: /ap:execute <task-id>
 target_role: implementing-agent
 summary: <one-line summary>
 
@@ -17,6 +18,14 @@ summary: <one-line summary>
 ## Priority
 
 <Use exactly one of: high | medium | low.>
+
+## Source Context
+
+<Summarize the decisive review finding or planning rationale, including the key evidence, dependency, or risk notes another agent needs immediately.>
+
+## Task Contract Snapshot
+
+<Restate the canonical task contract fields that execution depends on: title, spec, acceptance, and dependency notes. If the task has explicit `depends_on`, list them here.>
 
 ## Scope
 
@@ -44,4 +53,4 @@ summary: <one-line summary>
 
 ## Command Hint
 
-<Repeat the recommended next command, usually `/ap:fix <task-id>` or `/ap:execute <task-id>`.>
+<Repeat the recommended next command, usually `/ap:execute <task-id>`.>
