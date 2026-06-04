@@ -30,7 +30,14 @@
 - `feature`
 - `design`
 
-`review` 保留给旧 task 兼容读取，不再推荐用于新建 task。
+分类规则：
+
+- `bug`：修复已存在错误、回归、风险、review finding 或行为校正。
+- `feature`：新增或扩展用户可见能力、命令能力或产品行为。
+- `design`：协议、架构、接口契约、文档规范、跨模块设计调整，或主要交付物是设计约束而非直接功能。
+- `review`：仅兼容旧 task，新 task 不得使用。
+
+`origin_command` 表示任务来源，只能是 `review`、`plan` 或 `import`。它不同于 `task.type`；例如 `/ap:review` 产生的新 task 通常是 `type: "bug"` 且 `origin_command: "review"`。
 
 ## 任务结构（JSON）
 
@@ -170,7 +177,8 @@ pending|blocked|in_progress → cancelled
 - `/ap:import` 可以接收直接粘贴的 execution prompt、prompt artifact、plan artifact 或 plan 文档作为入口，并且只能把输入归一化为 task 和 artifact；不能直接改代码
 - 直接 prompt 输入应保存到 `.agent-memory/artifacts/prompt/` 并创建或匹配一个 pending task；直接 plan 输入应保存到 `.agent-memory/artifacts/plan/`，再拆成 task 和对应 execution prompt
 - 如果 plan 文档包含多个可执行项，只能创建或列出 task，不应隐式连续执行多个任务
-- `/ap:execute` 只能接收已有 task id、`next` 或 `--origin review|plan|import`，不能创建 task，不能接收直接 prompt 或 plan
+- `/ap:execute` 只能接收已有 task id、`next`、`--all` 和可选 `--origin review|plan|import` 来源过滤，不能创建 task，不能接收直接 prompt 或 plan；协议不提供 `--one` 或 `--loop`
+- `/ap:execute --all` 是当前 agent 会话内的安全串行批处理：每轮重新读取 `tasks.json`，一次只认领一个 task，优先恢复匹配的 `in_progress` task，不并行，不启动外部 supervisor
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 

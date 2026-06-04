@@ -19,7 +19,7 @@ argument-hint: "[requirement]"
 1. 读取 `.agent-memory/agent-protocol.md`（如存在）。
 2. 加载 `.agent-memory/tasks.json`。
 3. 确保 `.agent-memory/artifacts/plan/` 和 `.agent-memory/artifacts/prompt/` 存在。
-4. 分析需求，创建 task（type: `feature` 或 `design`），追加到 tasks 数组。
+4. 分析需求，创建 task（type: `feature` 或 `design`），追加到 tasks 数组；主要交付物是新增/扩展能力时用 `feature`，主要交付物是协议、架构、接口契约、文档规范或跨模块设计约束时用 `design`。
 5. 为本次分析生成 artifact，记录拆解依据、方案权衡和最终任务集合。
 6. 为每个 task 生成一个 `execution_prompt` artifact，要求目标、来源摘要、任务契约快照、范围、约束、建议实现方式、验证标准都明确，并写明推荐执行命令（通常是 `/ap:execute <task-id>`）。
 7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`、`origin_command`、`origin_artifact_id`、`prompt_artifact_id`、`source_summary`、`acceptance`、`depends_on`，并把 plan artifact 和 prompt artifact 引用写入相关 task。

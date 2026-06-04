@@ -1,6 +1,6 @@
 # /ap:review
 
-审查代码并创建 review task。省略 scope 时审查整个项目或当前未提交变更。此命令会同时写入 `.agent-memory/artifacts/review/` 下的 review artifact，并为每个可执行问题生成 `.agent-memory/artifacts/prompt/` 下的修复 prompt artifact。
+审查代码并创建 bug task。省略 scope 时审查整个项目或当前未提交变更。此命令会同时写入 `.agent-memory/artifacts/review/` 下的 review artifact，并为每个可执行问题生成 `.agent-memory/artifacts/prompt/` 下的修复 prompt artifact。`review` task type 仅兼容旧 task，新 task 不得使用。
 
 用户在调用本命令时传入的文本作为 scope。
 
@@ -20,4 +20,4 @@
 6. 为每个可执行问题单独生成一个 `execution_prompt` artifact，要求来源摘要清晰、边界清晰、问题描述清晰、建议修复方式清晰，并写明推荐执行命令（通常是 `/ap:execute <task-id>`）。
 7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`、`origin_command`、`origin_artifact_id`、`prompt_artifact_id`、`source_summary`、`acceptance`、`depends_on`，并把 review artifact 和 prompt artifact 引用都写入 `artifact_refs`。
 8. 更新相关 task 的 `last_reviewed_at`。
-9. 不修改业务代码，仅创建 review task。
+9. 不修改业务代码，仅创建 bug task。

@@ -7,7 +7,7 @@ This file contains command details that are intentionally kept out of `SKILL.md`
 - `/ap:review [scope]`: review code and create review-derived tasks. Write a review artifact under `.agent-memory/artifacts/review/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:plan [requirement]`: analyze requirements and create feature/design tasks. Write a plan artifact under `.agent-memory/artifacts/plan/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`: normalize external handoff input into task/artifact state only. It must not implement product code.
-- `/ap:execute [task-id|next|--origin review|plan|import]`: claim and implement existing pending tasks only. Omitted target means `next`. It must not create tasks or accept direct prompt/plan input.
+- `/ap:execute [task-id|next|--all] [--origin review|plan|import]`: claim and implement existing pending tasks only. Omitted target means `next`. `--origin` filters task source, not task type. There is no `--one` or `--loop`; use `task-id` or `next` for one task, and `--all` for safe serial batch execution. It must not create tasks or accept direct prompt/plan input.
 - `/ap:init`: initialize local protocol state only.
 - `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`: install or refresh command adapters only.
 - `/ap:prune`: remove completed/cancelled history only.
@@ -79,9 +79,14 @@ Use for `/ap:plan`, `/ap:review`, and `/ap:import`.
 
 Task creation rules:
 
-- `/ap:plan`: prefer existing architecture, naming, dependency patterns, and test style. Split unrelated deliverables into separate tasks. Prioritize dependency order, risk, and user-facing impact.
+- Task type rules:
+  - `bug`: fix an existing defect, regression, risk, review finding, or behavior correction.
+  - `feature`: add or extend user-visible capability, command behavior, or product behavior.
+  - `design`: define or change protocol, architecture, API contracts, documentation norms, cross-module design, or other design-first deliverables.
+  - `review`: compatibility only for old tasks. Do not create new tasks with this type.
+- `/ap:plan`: prefer existing architecture, naming, dependency patterns, and test style. Split unrelated deliverables into separate tasks. Prioritize dependency order, risk, and user-facing impact. Choose `type: "feature"` when the primary deliverable is executable capability; choose `type: "design"` when the primary deliverable is protocol, architecture, contract, or documentation design.
 - `/ap:review`: create tasks only for concrete actionable findings. Use `type: "bug"` for new defect tasks; keep old `review` tasks readable for compatibility.
-- `/ap:import`: accept only external execution prompt, prompt artifact, plan artifact, or plan document input. Save the imported source under `.agent-memory/artifacts/prompt/` or `.agent-memory/artifacts/plan/`, create missing pending tasks, generate missing execution prompt artifacts, set `origin_command: "import"`, report created task ids, and stop without implementing code.
+- `/ap:import`: accept only external execution prompt, prompt artifact, plan artifact, or plan document input. Save the imported source under `.agent-memory/artifacts/prompt/` or `.agent-memory/artifacts/plan/`, create missing pending tasks, generate missing execution prompt artifacts, infer `type` as `bug`, `feature`, or `design` from the imported content, default unclear imports to `feature` with the inference noted in `source_summary`, set `origin_command: "import"`, report created task ids, and stop without implementing code.
 - If an imported plan contains multiple executable items, create or list tasks only. Do not execute any task implicitly.
 - The prompt artifact must contain enough source context for another agent to execute without reconstructing the entire conversation.
 - If Graphify or an optional advisor contributed to the analysis, include only the necessary compressed summary in the plan/review artifact or prompt `Source Context`.
@@ -142,8 +147,11 @@ Use for `/ap:execute`.
 3. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
 4. Validate `tasks.json` when possible. Stop before side effects if invalid.
 5. Select an existing execution target before claiming work:
-   - Allowed selectors are `task-id`, `next`, and `--origin review|plan|import`.
+   - Allowed execution targets are `task-id`, `next`, and `--all`.
+   - `--origin review|plan|import` is an optional filter on `origin_command`; it is not a task type selector.
    - Pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
+   - If `task-id` is combined with `--origin`, verify the task's `origin_command` matches before claiming; stop on mismatch.
+   - If `--all` is selected, execute matching tasks serially. Do not run tasks in parallel, do not start an external supervisor, and do not claim more than one task at a time.
    - If the user provides a direct execution prompt, direct plan, prompt artifact, or plan artifact, stop and tell the user to run `/ap:import` first.
 6. Read `prompt_artifact_id` first when present; otherwise locate the execution prompt through `artifact_refs`.
 7. Read `origin_artifact_id` only when additional evidence is needed.
@@ -152,6 +160,8 @@ Use for `/ap:execute`.
 10. Run appropriate verification.
 11. Write a completion artifact under `.agent-memory/artifacts/done/` with implementation summary and validation results.
 12. Append the completion artifact reference, update `last_tested_at` when validation ran, fill `implementation_notes`, mark completed tasks `done`, and update `updated_at`.
+
+For `--all`, treat the command as a safe serial batch inside the current agent session. At the start of each iteration, reload `.agent-memory/tasks.json`, first resume an existing matching `in_progress` task when present, otherwise select the next matching `pending` task by priority and `created_at`. Claim only that single task, then perform steps 6-12 for it. After the task reaches `done`, `blocked`, or another terminal decision, reload `tasks.json` before choosing the next task. If a selected task has unmet `depends_on`, skip it or mark it `blocked` with the dependency reason. If implementation, validation, or required context fails for any task, write that task's completion or blocker record and stop the batch before starting later tasks. If the agent session stops unexpectedly, the next `/ap:execute --all` invocation must recover from `tasks.json` state; no separate loop or restart parameter is part of the protocol.
 
 Do not modify task contract fields such as `spec`, `context`, `title`, or `created_by`.
 

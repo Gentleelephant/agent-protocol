@@ -162,18 +162,25 @@
 
 ### `/ap:execute`
 
-输入：已有 task id、`next` 或 `--origin review|plan|import`。
+输入：已有 task id、`next`、`--all`，可选 `--origin review|plan|import`。不提供 `--one` 或 `--loop`；执行单个任务使用 `task-id` 或 `next`，批量执行使用 `--all`。
 行为：只读取已存在 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不创建 task，不接收直接 prompt 或 plan，不扩散修改范围。
 
 自然语言等价触发：
 
 - “执行 task-001”
 - “执行下一个 pending task”
+- “执行所有 pending task”
 - “执行刚才 review 生成的第 2 个 task”
 
 执行规则：
 
 - 只能选择 `pending` 或按恢复规则允许继续的既有 task。
+- `task-id`、`next`、`--all` 是执行目标；`--origin` 只是来源过滤，不表示 task 类型。
+- `--all` 是安全批处理，不是外部 supervisor，也不负责重启 agent。agent 会话中断时，下次再次运行 `/ap:execute --all` 继续按状态恢复。
+- `--all` 每轮只认领一个 task；每轮开始前必须重新读取 `.agent-memory/tasks.json`，优先处理已有 `in_progress` task，再选择下一个匹配的 `pending` task。
+- `--all` 串行执行，不并行执行；每个 task 必须独立读取 prompt、独立状态流转、独立写 completion artifact。
+- 若 task 的 `depends_on` 尚未完成，跳过该 task 或标记为 `blocked` 并说明原因，不能强行执行。
+- 批量执行中遇到实现失败、验证失败或 blocker 时，记录当前 task 结果并停止后续执行。
 - 如果用户传入直接 prompt、直接 plan 或 artifact 内容，必须停止并要求先使用 `/ap:import`。
 - 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
 - 真正开始实现前，被执行工作单元必须已有 task id、`prompt_artifact_id` 和正常状态流转记录。
@@ -246,6 +253,17 @@
 - `Constraints` 必须写出禁止项
 - `Suggested Fix` 必须优先写推荐方案，避免给一堆无排序选项
 - `Validation` 必须写具体命令、测试点或验收现象
+
+## Task 分类规则
+
+`task.type` 表示任务性质，`origin_command` 表示任务来源。`/ap:execute --origin` 只过滤 `origin_command`，不要把它当作类型过滤器。
+
+- `bug`：修复已存在错误、回归、风险、review finding 或行为校正。
+- `feature`：新增或扩展用户可见能力、命令能力或产品行为。
+- `design`：协议、架构、接口契约、文档规范、跨模块设计调整，或主要交付物是设计约束而非直接功能。
+- `review`：仅兼容旧 task，新 task 不得使用。
+
+`/ap:plan` 应在 `feature` 与 `design` 之间按主要交付物选择；`/ap:review` 产出的可执行问题默认使用 `bug`；`/ap:import` 必须根据输入内容推断 `bug`、`feature` 或 `design`，无法可靠判断时默认 `feature`，并在 `source_summary` 记录推断依据。
 
 ## Prompt 生成要求
 

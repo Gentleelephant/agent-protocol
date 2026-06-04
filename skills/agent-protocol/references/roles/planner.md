@@ -15,6 +15,10 @@
 4. 读取并尽量校验 `.agent-memory/tasks.json`。
 5. 确保 `.agent-memory/artifacts/` 及对应子目录存在。
 6. 根据用户意图创建 `bug`、`feature` 或 `design` task；旧 `review` task 仅兼容读取。
+   - `bug`：修复已存在错误、回归、风险、review finding 或行为校正。
+   - `feature`：新增或扩展用户可见能力、命令能力或产品行为。
+   - `design`：协议、架构、接口契约、文档规范、跨模块设计调整，或主要交付物是设计约束而非直接功能。
+   - `review`：仅兼容旧 task，新 task 不得使用。
 7. 为新 task 填写明确的 `context`、可执行的 `spec`，以及 `origin_command`、`origin_artifact_id`、`prompt_artifact_id`、`source_summary`、`acceptance`、`depends_on`。
 8. 对 `/ap:review`、`/ap:plan` 新建的每个可执行 task，再额外生成一个 `execution_prompt` artifact，保存到 `.agent-memory/artifacts/prompt/`。prompt 必须包含来源摘要和任务契约快照。
 9. 为 `/ap:review`、`/ap:plan` 生成对应 artifact，并把引用写入相关 task。
@@ -24,6 +28,8 @@
 ### 兼容规则
 
 - 新任务统一写 `created_by: "agent"`。
+- `origin_command` 只表示来源命令；不要用它替代 `task.type`。`/ap:review` 产出的新 task 通常是 `type: "bug"` 且 `origin_command: "review"`。
+- `/ap:import` 必须从输入内容推断 `bug`、`feature` 或 `design`；无法可靠判断时默认 `feature`，并在 `source_summary` 记录推断依据。
 - 不根据 agent 身份做角色门禁。
 - graphify 和外部顾问 skill 都不能直接接管 `.agent-memory` 状态流转。
 - prompt 的 `Source Context` 应保留必要检索和方案依据，但不能要求执行 agent 读取大量历史上下文才能开工。

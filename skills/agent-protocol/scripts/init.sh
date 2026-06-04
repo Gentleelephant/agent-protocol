@@ -78,7 +78,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - `/ap:review [scope]`
 - `/ap:plan [requirement]`
 - `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`
-- `/ap:execute [task-id|next|--origin review|plan|import]`
+- `/ap:execute [task-id|next|--all] [--origin review|plan|import]`
 - `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`
 - `/ap:prune`
 - `/ap:reset`
