@@ -1,0 +1,12 @@
+# /ap:install
+
+安装或刷新命令适配器。此命令只复制命令文件并清理已废弃的旧 fix 入口，不初始化 `.agent-memory`，不创建 task，不修改业务代码。
+
+用户在调用本命令时传入的文本作为安装参数处理。
+
+## 工作流
+
+1. 检测 `--agent`：`all`、`claude`、`mastracode`、`reasonix`，默认 `all`。
+2. 检测 `--scope`：`project` 或 `user`，默认 `project`。
+3. 优先运行 `skills/agent-protocol/scripts/install-commands.sh`，传入相同参数。
+4. 报告安装位置、已创建文件、已跳过文件和已删除的旧 fix 文件。

@@ -1,7 +1,6 @@
 ---
 name: ap:init
-description: "Bootstrap agent-protocol project initialization for Claude Code. Creates local protocol state and installs project-level /ap: subcommands."
-argument-hint: "[--agent claude|mastracode|reasonix|all]"
+description: "Bootstrap agent-protocol project initialization for Claude Code. Creates local protocol state only."
 ---
 
 # /ap:init
@@ -20,8 +19,5 @@ immediately after the skill is installed.
 
 ## Arguments
 
-- No arguments: same as `/ap:init --agent all`
-- `--agent claude`: initialize protocol files and install only Claude project commands
-- `--agent mastracode`: initialize protocol files and install only Mastra Code project commands
-- `--agent reasonix`: initialize protocol files and install only Reasonix project commands
-- `--agent all`: initialize protocol files and install all supported command sets
+- No arguments: initialize local protocol state.
+- Command adapter installation is a separate `/ap:install` responsibility.

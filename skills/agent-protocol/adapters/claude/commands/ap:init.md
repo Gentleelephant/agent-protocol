@@ -1,12 +1,11 @@
 ---
 name: ap:init
-description: "Initialize or update project-level personal protocol config."
-argument-hint: "[--agent all|claude|mastracode|reasonix]"
+description: "Initialize project-level personal protocol state only."
 ---
 
 # /ap:init
 
-初始化或更新项目级个人协议配置。配置命令，任何 agent 均可执行。会一并安装 `/ap:clean`。
+初始化项目级个人协议状态。配置命令，任何 agent 均可执行。此命令不安装 `/ap:` 子命令。
 
 ## 工作流
 
@@ -15,10 +14,9 @@ argument-hint: "[--agent all|claude|mastracode|reasonix]"
    - `.agent-memory/agent-protocol.md`
    - `.agent-memory/tasks.json`（仅缺失时创建 `{"tasks": []}`）
    - `.agent-memory/artifacts/` 及其 `review`、`plan`、`prompt`、`done` 子目录
-3. 根据 `--agent` 安装项目级 `/ap:` 子命令；默认 `all`，可选 `claude`、`mastracode`、`reasonix`。已有命令文件跳过，不覆盖。
-4. 根据 `--agent` 创建对应 agent 的本地入口文件：
-   - `claude|all` -> `CLAUDE.local.md`
-   - `mastracode|all` -> `.mastracode/AGENTS.md`
-   - `reasonix|all` -> `.reasonix/commands/ap/`
-5. Git 仓库下更新 `.git/info/exclude` 忽略上述文件。
-6. 不修改团队共享的 `AGENTS.md` 或 `CLAUDE.md`。
+3. 创建本地入口文件：
+   - `CLAUDE.local.md`
+   - `.mastracode/AGENTS.md`
+4. Git 仓库下更新 `.git/info/exclude` 忽略上述文件和 `.agent-memory/`。
+5. 不修改团队共享的 `AGENTS.md` 或 `CLAUDE.md`。
+6. 如需安装命令适配器，必须单独使用 `/ap:install`。

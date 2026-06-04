@@ -6,10 +6,12 @@ This file contains command details that are intentionally kept out of `SKILL.md`
 
 - `/ap:review [scope]`: review code and create review-derived tasks. Write a review artifact under `.agent-memory/artifacts/review/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:plan [requirement]`: analyze requirements and create feature/design tasks. Write a plan artifact under `.agent-memory/artifacts/plan/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
-- `/ap:execute [task-id|next|--origin review|plan|prompt|plan-artifact]`: claim and implement pending tasks. Omitted target means `next`. Direct prompt or plan input is first normalized into task/artifact state, then executed.
-- `/ap:fix [task-id]`: compatibility alias for `/ap:execute`.
-- `/ap:clean [history|all]`: clean `.agent-memory`. Omitted mode means `history`.
-- `/ap:init [--agent all|claude|mastracode|reasonix]`: initialize local protocol files and command adapters.
+- `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`: normalize external handoff input into task/artifact state only. It must not implement product code.
+- `/ap:execute [task-id|next|--origin review|plan|import]`: claim and implement existing pending tasks only. Omitted target means `next`. It must not create tasks or accept direct prompt/plan input.
+- `/ap:init`: initialize local protocol state only.
+- `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`: install or refresh command adapters only.
+- `/ap:prune`: remove completed/cancelled history only.
+- `/ap:reset`: reset local `.agent-memory` state only.
 
 ## Init Workflow
 
@@ -19,9 +21,6 @@ Prefer running:
 
 ```bash
 bash <skill-root>/scripts/init.sh --project
-bash <skill-root>/scripts/init.sh --project --agent claude
-bash <skill-root>/scripts/init.sh --project --agent mastracode
-bash <skill-root>/scripts/init.sh --project --agent reasonix
 ```
 
 Create missing project-local private files and skip existing files:
@@ -32,28 +31,19 @@ Create missing project-local private files and skip existing files:
 .agent-memory/artifacts/
 CLAUDE.local.md
 .mastracode/AGENTS.md
-.reasonix/commands/ap/
 ```
 
-Install selected command adapters without overwriting existing files:
-
-```text
-.claude/commands/
-.mastracode/commands/ap/
-.reasonix/commands/ap/
-```
+Do not install command adapters during init. Use `/ap:install` or `scripts/install-commands.sh` for adapter installation.
 
 If the current directory is a git repo, add these patterns to `.git/info/exclude` when missing:
 
 ```text
 .agent-memory/
-.claude/
-.mastracode/
-.reasonix/
 CLAUDE.local.md
+.mastracode/AGENTS.md
 ```
 
-Preserve existing `.agent-memory/tasks.json`. Create it as exactly `{"tasks": []}` only when missing. After init, summarize selected agent scope, created vs skipped files, and whether `.git/info/exclude` changed.
+Preserve existing `.agent-memory/tasks.json`. Create it as exactly `{"tasks": []}` only when missing. After init, summarize created vs skipped files and whether `.git/info/exclude` changed.
 
 ## Install Workflow
 
@@ -63,13 +53,14 @@ Use this when the user asks only to install or refresh command adapters.
 2. Detect scope: `user` or `global` means user-level install; default project-level install.
 3. Prefer `bash <skill-root>/scripts/install-commands.sh`, adding `--agent <name>` and `--scope user` when applicable.
 4. Existing command files should be skipped, not overwritten.
-5. Report what was installed and where.
+5. Remove obsolete installed fix command files when found.
+6. Report what was installed and where.
 
 Do not create tasks for install-only requests.
 
 ## Task Creation Workflow
 
-Use for `/ap:plan` and `/ap:review`.
+Use for `/ap:plan`, `/ap:review`, and `/ap:import`.
 
 1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
 2. Inspect enough project context to create concrete tasks.
@@ -90,6 +81,8 @@ Task creation rules:
 
 - `/ap:plan`: prefer existing architecture, naming, dependency patterns, and test style. Split unrelated deliverables into separate tasks. Prioritize dependency order, risk, and user-facing impact.
 - `/ap:review`: create tasks only for concrete actionable findings. Use `type: "bug"` for new defect tasks; keep old `review` tasks readable for compatibility.
+- `/ap:import`: accept only external execution prompt, prompt artifact, plan artifact, or plan document input. Save the imported source under `.agent-memory/artifacts/prompt/` or `.agent-memory/artifacts/plan/`, create missing pending tasks, generate missing execution prompt artifacts, set `origin_command: "import"`, report created task ids, and stop without implementing code.
+- If an imported plan contains multiple executable items, create or list tasks only. Do not execute any task implicitly.
 - The prompt artifact must contain enough source context for another agent to execute without reconstructing the entire conversation.
 - If Graphify or an optional advisor contributed to the analysis, include only the necessary compressed summary in the plan/review artifact or prompt `Source Context`.
 - Do not require the execution agent to rerun Graphify or the advisor unless validation genuinely depends on updated cross-file context.
@@ -142,18 +135,16 @@ Quality requirements:
 
 ## Implementation Workflow
 
-Use for `/ap:execute` and `/ap:fix`.
+Use for `/ap:execute`.
 
 1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
-2. Load `.agent-memory/tasks.json`; if missing, create `{"tasks": []}`, report no pending tasks, and stop unless the user also asked to initialize or create tasks.
+2. Load `.agent-memory/tasks.json`; if missing, create `{"tasks": []}`, report no pending tasks, and stop.
 3. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
 4. Validate `tasks.json` when possible. Stop before side effects if invalid.
-5. Normalize the execution target before claiming work:
-   - Existing task selector (`task-id`, `next`, `--origin review|plan`): pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
-   - Existing prompt artifact path or artifact id: find its `related_task_ids`; if they reference a pending task, use that task. If no task exists, create a pending task from the prompt, save or reference the prompt artifact, and set `prompt_artifact_id`.
-   - Direct pasted execution prompt: verify it contains the required execution prompt sections, write it under `.agent-memory/artifacts/prompt/`, create a pending task from its `Goal`, `Priority`, `Scope`, `Task Contract Snapshot`, and `Validation`, then use that task.
-   - Existing plan artifact path or artifact id: resolve any referenced task or prompt first. If the plan contains multiple executable items without a selected target, create/update only the missing pending tasks and report the choices instead of executing all of them implicitly.
-   - Direct pasted plan document: write it under `.agent-memory/artifacts/plan/`, split executable items into pending tasks, generate one execution prompt artifact per task, and execute only the selected task. If no single task is selected, report the created task ids and stop.
+5. Select an existing execution target before claiming work:
+   - Allowed selectors are `task-id`, `next`, and `--origin review|plan|import`.
+   - Pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
+   - If the user provides a direct execution prompt, direct plan, prompt artifact, or plan artifact, stop and tell the user to run `/ap:import` first.
 6. Read `prompt_artifact_id` first when present; otherwise locate the execution prompt through `artifact_refs`.
 7. Read `origin_artifact_id` only when additional evidence is needed.
 8. Mark claimed tasks `in_progress`.
@@ -164,11 +155,11 @@ Use for `/ap:execute` and `/ap:fix`.
 
 Do not modify task contract fields such as `spec`, `context`, `title`, or `created_by`.
 
-Direct prompt and plan input is a convenience entrypoint only. It must not bypass `.agent-memory/tasks.json`; before implementation, every executed unit of work must have a task id, an execution prompt artifact, and normal lifecycle updates.
+Before implementation, every executed unit of work must already have a task id, an execution prompt artifact, and normal lifecycle state. `/ap:execute` must not create tasks or import external handoff content.
 
 ## Cleanup Workflow
 
-`/ap:clean history`:
+`/ap:prune`:
 
 1. Read `.agent-memory/tasks.json`.
 2. Keep tasks with status `pending`, `in_progress`, or `blocked`.
@@ -177,7 +168,7 @@ Direct prompt and plan input is a convenience entrypoint only. It must not bypas
 5. Delete review, plan, and prompt artifacts referenced only by removed terminal tasks.
 6. Preserve `.agent-memory/agent-protocol.md` and directory structure.
 
-`/ap:clean all`:
+`/ap:reset`:
 
 1. Preserve `.agent-memory/agent-protocol.md`.
 2. Reset `.agent-memory/tasks.json` to `{"tasks": []}`.

@@ -10,9 +10,9 @@ argument-hint: "[scope]"
 
 如果当前 agent 不支持 `/ap:` 子命令，则以下自然语言请求应触发同样效果：
 
-- “review 这段代码”
-- “检查这个模块有没有问题，并给出修复 prompt”
-- “审查最近改动并整理可执行修复项”
+- “按 agent-protocol review 这段代码”
+- “按 agent-protocol 检查这个模块并生成修复 task”
+- “审查最近改动并持久化可执行修复项”
 
 ## 工作流
 

@@ -10,9 +10,9 @@ argument-hint: "[requirement]"
 
 如果当前 agent 不支持 `/ap:` 子命令，则以下自然语言请求应触发同样效果：
 
-- “根据这个需求结合项目代码整理开发计划”
-- “结合当前代码拆解实现方案”
-- “给我一组可以让别的 agent 直接执行的开发 prompt”
+- “按 agent-protocol 根据这个需求结合项目代码整理开发计划”
+- “按 agent-protocol 结合当前代码拆解实现方案”
+- “给我一组可以让别的 agent 直接执行的开发 prompt 并持久化 task”
 
 ## 工作流
 

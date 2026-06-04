@@ -3,28 +3,14 @@ set -euo pipefail
 
 # 用法:
 #   skills/agent-protocol/scripts/init.sh --project
-#   skills/agent-protocol/scripts/init.sh --project --agent claude
-#   skills/agent-protocol/scripts/init.sh --project --agent mastracode
-#   skills/agent-protocol/scripts/init.sh --project --agent reasonix
 
 PROJECT_MODE=0
-AGENT="all"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --project)
       PROJECT_MODE=1
       shift
-      ;;
-    --agent)
-      if [ "$#" -lt 2 ]; then
-        echo "error: --agent requires a value" >&2
-        exit 1
-      fi
-      AGENT="$2"
-      shift 2
       ;;
     *)
       echo "error: unknown argument: $1" >&2
@@ -37,15 +23,6 @@ if [ "$PROJECT_MODE" -ne 1 ]; then
   echo "error: this script only initializes project-local personal config. Use --project." >&2
   exit 1
 fi
-
-case "$AGENT" in
-  claude|mastracode|reasonix|all)
-    ;;
-  *)
-    echo "error: --agent must be one of: claude, mastracode, reasonix, all" >&2
-    exit 1
-    ;;
-esac
 
 ensure_dir() {
   local dir="$1"
@@ -68,17 +45,6 @@ write_file_if_missing() {
   fi
 }
 
-copy_if_missing() {
-  local src="$1"
-  local dest="$2"
-  if [ -e "$dest" ]; then
-    echo "  - $dest 已存在，跳过"
-  else
-    cp "$src" "$dest"
-    echo "  - $dest 已创建"
-  fi
-}
-
 AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 # Agent 协作协议（项目级个人配置）
 
@@ -91,7 +57,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - 不要求显式声明角色
 - 任何 agent 都可以读取并推进 task 与 artifact
 - 支持 `/ap:` 子命令时可以直接使用子命令
-- 不支持 `/ap:` 子命令时，必须把自然语言请求解释成等价命令意图
+- 不支持 `/ap:` 子命令时，只有明确 agent-protocol 意图的自然语言请求才解释成等价命令意图
 
 ## 读取顺序
 
@@ -111,26 +77,31 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 - `/ap:review [scope]`
 - `/ap:plan [requirement]`
-- `/ap:execute [task-id|next|--origin review|plan|prompt|plan-artifact]`
-- `/ap:fix [task-id]`（兼容别名）
-- `/ap:clean [history|all]`
+- `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`
+- `/ap:execute [task-id|next|--origin review|plan|import]`
+- `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`
+- `/ap:prune`
+- `/ap:reset`
 - `/ap:init`
 
 ## 自然语言等价意图
 
-- “根据这个需求结合项目代码整理开发计划” => `plan`
-- “review 这段代码并给出修复 prompt” => `review`
-- “执行刚才 plan 产出的 prompt” => `execute`
-- “执行刚才 review 产出的修复 prompt” => `execute`
-- “清理 .agent-memory 里的历史数据” => `clean`
+- “按 agent-protocol 根据这个需求结合项目代码整理开发计划” => `plan`
+- “按 agent-protocol review 这段代码并给出修复 prompt” => `review`
+- “导入这个执行 prompt 并创建 task” => `import`
+- “执行已有 task-001” => `execute`
+- “安装 agent-protocol 命令适配器” => `install`
+- “清理 .agent-memory 里的历史数据” => `prune`
+- “重置 .agent-memory 本地状态” => `reset`
 - 对不支持子命令的 agent，上述自然语言必须产出与 `/ap:` 相同的 task，并持久化保存到相同的 artifact 目录
 
 ## 项目规则
 
 - 不要修改项目根目录的 `AGENTS.md` 或 `CLAUDE.md` 来启用本协议
-- 不需要用户显式说“按 agent-protocol”或声明角色
+- 普通 review、debug、fix、plan 不自动进入协议流程；需要显式 `/ap:` 或明确 agent-protocol / task / artifact 意图
 - `/ap:plan` 和 `/ap:review` 必须把开发计划、review 结果和 execution prompt 持久化写入 `.agent-memory/artifacts/`
-- `/ap:execute` 接收直接 prompt 或 plan 文档时，必须先归一化为 task 和 artifact，再执行
+- `/ap:import` 接收直接 prompt 或 plan 文档时，只归一化为 task 和 artifact，不执行
+- `/ap:execute` 只能执行已有 task，不能创建 task，不能接收直接 prompt 或 plan 文档
 - 不支持子命令时，等价自然语言请求也必须写入同样的 `.agent-memory/artifacts/`
 - `.agent-memory/` 是个人本地状态目录，应保持不提交
 EOF
@@ -145,46 +116,20 @@ ENTRY_CONTENT=$(cat <<'EOF'
 
 默认行为：
 
-- review / 审查 / 检查代码 / 找问题 => 创建 pending task 和修复 prompt
-- 规划 / 设计 / 拆任务 / 需求分析 => 创建 pending task、开发计划 artifact 和执行 prompt
-- 处理 pending task / 实现 task / 修复 task => 更新 task 状态、执行验证并记录完成结果
+- 明确 `/ap:review` 或“按 agent-protocol review” => 创建 pending task 和修复 prompt
+- 明确 `/ap:plan` 或“按 agent-protocol 规划” => 创建 pending task、开发计划 artifact 和执行 prompt
+- 明确 `/ap:import` 或“导入执行 prompt” => 只创建 task 和 artifact，不执行
+- 明确 `/ap:execute` 或“执行已有 task” => 更新 task 状态、执行验证并记录完成结果
 
 不要求显式区分角色。任何 agent 都可以读取并推进 task 与 artifact。
 
 如果当前 agent 不支持 `/ap:` 子命令，就把上述意图当作自然语言工作流执行，并产出相同且持久化保存的 task 与 artifact。
 
-支持命令：`/ap:init`, `/ap:review`, `/ap:plan`, `/ap:execute`, `/ap:fix`, `/ap:clean`。
+支持命令：`/ap:init`, `/ap:install`, `/ap:review`, `/ap:plan`, `/ap:import`, `/ap:execute`, `/ap:prune`, `/ap:reset`。
 EOF
 )
 
-install_claude_commands() {
-  ensure_dir ".claude"
-  ensure_dir ".claude/commands"
-  for src in "$SKILL_ROOT"/adapters/claude/commands/ap:*.md; do
-    copy_if_missing "$src" ".claude/commands/$(basename "$src")"
-  done
-}
-
-install_mastracode_commands() {
-  ensure_dir ".mastracode"
-  ensure_dir ".mastracode/commands"
-  ensure_dir ".mastracode/commands/ap"
-  for src in "$SKILL_ROOT"/adapters/mastracode/commands/ap/*.md; do
-    copy_if_missing "$src" ".mastracode/commands/ap/$(basename "$src")"
-  done
-}
-
-install_reasonix_commands() {
-  ensure_dir ".reasonix"
-  ensure_dir ".reasonix/commands"
-  ensure_dir ".reasonix/commands/ap"
-  for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
-    copy_if_missing "$src" ".reasonix/commands/ap/$(basename "$src")"
-  done
-}
-
 echo "✓ 项目级个人配置初始化"
-echo "  - agent: $AGENT"
 
 ensure_dir ".agent-memory"
 ensure_dir ".agent-memory/artifacts"
@@ -201,25 +146,14 @@ else
   echo "  - .agent-memory/tasks.json 已存在，跳过"
 fi
 
-if [ "$AGENT" = "claude" ] || [ "$AGENT" = "all" ]; then
-  write_file_if_missing "CLAUDE.local.md" "$ENTRY_CONTENT"
-  install_claude_commands
-fi
-
-if [ "$AGENT" = "mastracode" ] || [ "$AGENT" = "all" ]; then
-  ensure_dir ".mastracode"
-  write_file_if_missing ".mastracode/AGENTS.md" "$ENTRY_CONTENT"
-  install_mastracode_commands
-fi
-
-if [ "$AGENT" = "reasonix" ] || [ "$AGENT" = "all" ]; then
-  install_reasonix_commands
-fi
+write_file_if_missing "CLAUDE.local.md" "$ENTRY_CONTENT"
+ensure_dir ".mastracode"
+write_file_if_missing ".mastracode/AGENTS.md" "$ENTRY_CONTENT"
 
 if [ -d ".git" ]; then
   mkdir -p ".git/info"
   touch ".git/info/exclude"
-  for pattern in ".agent-memory/" ".claude/" ".mastracode/" ".reasonix/" "CLAUDE.local.md"; do
+  for pattern in ".agent-memory/" "CLAUDE.local.md" ".mastracode/AGENTS.md"; do
     if ! grep -Fxq "$pattern" ".git/info/exclude"; then
       printf "%s\n" "$pattern" >> ".git/info/exclude"
     fi

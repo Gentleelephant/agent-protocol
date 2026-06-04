@@ -72,6 +72,12 @@ install_claude() {
   local target_dir="$base/commands"
   mkdir -p "$target_dir"
   echo "  - Claude Code -> $target_dir"
+  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md"; do
+    if [ -e "$obsolete" ]; then
+      rm -f "$obsolete"
+      echo "    - $(basename "$obsolete") 已删除（废弃命令）"
+    fi
+  done
   for src in "$SKILL_ROOT"/adapters/claude/commands/ap:*.md; do
     local dest="$target_dir/$(basename "$src")"
     if [ -e "$dest" ]; then
@@ -88,6 +94,12 @@ install_mastracode() {
   local target_dir="$base/commands/ap"
   mkdir -p "$target_dir"
   echo "  - Mastra Code -> $target_dir"
+  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md"; do
+    if [ -e "$obsolete" ]; then
+      rm -f "$obsolete"
+      echo "    - $(basename "$obsolete") 已删除（废弃命令）"
+    fi
+  done
   for src in "$SKILL_ROOT"/adapters/mastracode/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
     if [ -e "$dest" ]; then
@@ -104,6 +116,12 @@ install_reasonix() {
   local target_dir="$base/commands/ap"
   mkdir -p "$target_dir"
   echo "  - Reasonix -> $target_dir"
+  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md"; do
+    if [ -e "$obsolete" ]; then
+      rm -f "$obsolete"
+      echo "    - $(basename "$obsolete") 已删除（废弃命令）"
+    fi
+  done
   for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
     if [ -e "$dest" ]; then

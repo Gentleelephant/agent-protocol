@@ -1,19 +1,26 @@
 # agent-protocol
 
-一个围绕 3 个核心命令和 2 个辅助命令组织的 agent 协议：
+一个围绕单一职责命令组织的 agent 协议：
 
 - `/ap:plan`：根据用户需求和项目代码，生成开发计划和可执行 prompt
 - `/ap:review`：review 代码，输出 review 结果和修复 prompt
-- `/ap:execute`：执行 `/ap:plan` 或 `/ap:review` 生成的 task / prompt；也可接收直接粘贴的 prompt 或 plan 文档，并先归一化为 task / artifact
-- `/ap:fix`：`/ap:execute` 的兼容别名，保留给 review 修复语义
-- `/ap:clean`：清理 `.agent-memory` 历史数据或重置本地协议状态
+- `/ap:import`：只把外部 execution prompt、prompt artifact、plan artifact 或 plan 文档归一化为 task / artifact，不执行代码
+- `/ap:execute`：只执行已存在的 pending task，不创建 task，不接收直接 prompt 或 plan
+- `/ap:init`：只初始化 `.agent-memory` 本地协议状态
+- `/ap:install`：只安装或刷新项目级 / 用户级命令适配器
+- `/ap:prune`：只清理已完成或已取消的历史 task 和对应历史 artifact
+- `/ap:reset`：只重置本地 `.agent-memory` 状态
 
 对于不支持子命令的 agent，例如 Codex，也必须支持。做法不是依赖 `/ap:` 语法，而是把这些命令视为自然语言意图：
 
-- “根据这个需求结合项目代码整理开发计划” = `/ap:plan`
-- “review 这段代码并给出修复 prompt” = `/ap:review`
-- “执行刚才 plan 产出的 prompt” = `/ap:execute`
-- “执行刚才 review 产出的修复 prompt” = `/ap:execute`
+- “按 agent-protocol 根据这个需求结合项目代码整理开发计划” = `/ap:plan`
+- “按 agent-protocol review 这段代码并给出修复 prompt” = `/ap:review`
+- “导入这个执行 prompt 并创建 task” = `/ap:import`
+- “执行刚才 plan 产出的 task” = `/ap:execute`
+- “执行刚才 review 产出的修复 task” = `/ap:execute`
+- “安装 agent-protocol 命令适配器” = `/ap:install`
+- “清理 .agent-memory 历史记录” = `/ap:prune`
+- “重置 .agent-memory 本地状态” = `/ap:reset`
 
 ## 核心结构
 
@@ -21,6 +28,7 @@
 
 1. 需求实现链路：`plan -> execute`
 2. 代码修复链路：`review -> execute`
+3. 外部交接链路：`import -> execute`
 
 ## 缓存与检索策略
 
@@ -28,27 +36,24 @@
 
 如果项目中存在 `graphify-out/`，在 `/ap:plan` 或宽范围 `/ap:review` 中应优先用 graphify 图谱查询定位相关模块、文件和概念，再按需读取源码或文档确认事实。graphify 只作为检索索引，不接管 `.agent-memory` 状态流转。
 
-对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt；`/ap:execute` 即使接收直接 prompt 或 plan 文档，也必须先归一化为 task / artifact，再进入实现阶段。
+对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt。外部 prompt 或 plan 文档只能通过 `/ap:import` 归一化；`/ap:execute` 不负责导入或创建 task。
 
 无子命令兼容规则：
 
 - 支持 `/ap:` 子命令的 agent，优先用子命令
-- 不支持 `/ap:` 子命令的 agent，必须通过自然语言完成同样效果
+- 不支持 `/ap:` 子命令的 agent，必须通过明确的 agent-protocol 自然语言意图完成同样效果
 - 无论走哪种入口，输出物和 prompt 质量要求必须一致
 
-可选初始化命令：
+初始化与安装命令：
 
-- `/ap:init`：初始化本地协议目录，并安装项目级 `/ap:` 子命令
+- `/ap:init`：初始化本地协议目录，不安装命令适配器
+- `/ap:install`：安装 Claude / Mastra Code / Reasonix 子命令
 
 对 Claude Code，仓库现在额外提供了一个顶层 bootstrap skill：
 
 - `skills/ap:init/SKILL.md`
 
-它的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init`，再由 `/ap:init` 调用主 `agent-protocol` skill 完成初始化和子命令安装。
-
-可选安装命令：
-
-- 安装 Claude / Mastra Code / Reasonix 子命令：`skills/agent-protocol/scripts/install-commands.sh`
+它的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init`，再由 `/ap:init` 调用主 `agent-protocol` skill 完成本地状态初始化。命令适配器安装必须走 `/ap:install` 或 `skills/agent-protocol/scripts/install-commands.sh`。
 
 ## 输出物
 
@@ -69,7 +74,8 @@
 - `/ap:review` 为每个问题生成一个修复 prompt
 - `/ap:plan` 和 `/ap:review` 生成的开发计划、review 结果和 prompt 必须持久化保存到 `.agent-memory/artifacts/`
 - 不支持 `/ap:` 子命令的 agent 走自然语言等价流程时，也必须保存到同样的位置
-- `/ap:execute` 优先读取关联 prompt，并在执行后自动完成验证与完成记录
+- `/ap:import` 只导入外部 prompt / plan 并创建 task，不执行
+- `/ap:execute` 只读取已存在 task 的关联 prompt，并在执行后自动完成验证与完成记录
 - 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
 
 同时，task 本身也要带上最小但关键的来源索引，至少包括：
@@ -81,6 +87,16 @@
 - `acceptance`
 - `depends_on`
 
+命令边界是协议稳定性的硬约束：
+
+- 创建任务只能由 `/ap:plan`、`/ap:review`、`/ap:import` 完成
+- 执行业务代码修改只能由 `/ap:execute` 完成
+- 初始化本地状态只能由 `/ap:init` 完成
+- 安装命令适配器只能由 `/ap:install` 或 `install-commands.sh` 完成
+- 清理历史只能由 `/ap:prune` 完成
+- 重置状态只能由 `/ap:reset` 完成
+- 不存在 fix 兼容命令；review 修复任务也必须通过 `/ap:execute <task-id>` 执行
+
 ## 命令
 
 ### `/ap:plan`
@@ -90,9 +106,9 @@
 
 自然语言等价触发：
 
-- “帮我根据这个需求整理开发计划”
-- “结合当前代码拆解实现方案”
-- “给我一组可以让别的 agent 直接执行的开发 prompt”
+- “按 agent-protocol 帮我根据这个需求整理开发计划”
+- “按 agent-protocol 结合当前代码拆解实现方案”
+- “给我一组可以让别的 agent 直接执行的开发 prompt 并持久化 task”
 
 `plan` 产物必须包含：
 
@@ -102,7 +118,7 @@
 - 明确范围
 - 建议实现方式
 - 验收标准
-- 推荐执行命令，通常是 `/ap:execute <plan-prompt>`
+- 推荐执行命令，必须是 `/ap:execute <task-id>`
 
 ### `/ap:review`
 
@@ -111,9 +127,9 @@
 
 自然语言等价触发：
 
-- “review 这段代码”
-- “检查这个模块有没有问题，并给出修复 prompt”
-- “审查最近改动并整理可执行修复项”
+- “按 agent-protocol review 这段代码”
+- “按 agent-protocol 检查这个模块并生成修复 task”
+- “审查最近改动并持久化可执行修复项”
 
 `review` 产物必须包含：
 
@@ -125,42 +141,61 @@
 - 验收方式
 - 推荐执行命令，通常是 `/ap:execute <task-id>`
 
-### `/ap:execute`
+### `/ap:import`
 
-输入：`plan` 或 `review` 生成的 task / prompt，也可以是直接粘贴的 execution prompt、prompt artifact、plan artifact 或 plan 文档。
-行为：先把输入归一化为 task 和 artifact，再读取 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不扩散修改范围。
+输入：外部 execution prompt、prompt artifact、plan artifact 或 plan 文档。
+行为：只把输入归一化为 `.agent-memory` 下的 task 和 artifact，不修改业务代码，不运行实现。
 
 自然语言等价触发：
 
-- “执行刚才 plan 生成的第 2 条 prompt”
-- “按照这个开发 prompt 去实现”
-- “根据这个开发 prompt 继续做代码实现”
+- “导入这个执行 prompt 并创建 task”
+- “把这个 plan 文档转换成 agent-protocol task”
+- “根据这个外部 prompt 生成可执行任务”
 
-直接 prompt / plan 输入规则：
+导入规则：
 
-- 如果输入是已有 task、`next` 或 `--origin review|plan`，按现有 pending task 选择规则执行。
 - 如果输入是 prompt artifact 或直接粘贴的 execution prompt，先匹配 `related_task_ids`；没有匹配 task 时保存 prompt artifact，并创建一个 pending task。
 - 如果输入是 plan artifact 或直接粘贴的 plan 文档，先解析可执行项，保存 plan artifact，并为每个可执行项创建 task 和 execution prompt。
-- 如果 plan 中包含多个可执行项且用户没有指定目标，只创建或列出 task，不隐式连续执行全部任务。
-- 真正开始实现前，每个被执行的工作单元都必须有 task id、`prompt_artifact_id` 和正常状态流转记录。
+- 如果 plan 中包含多个可执行项，只创建或列出 task，不执行任何任务。
+- 导入产生的新 task 使用 `origin_command: "import"`。
 
-### `/ap:fix`
+### `/ap:execute`
 
-兼容别名：等价于 `/ap:execute`，但保留给“修复 review 问题”的使用习惯。
+输入：已有 task id、`next` 或 `--origin review|plan|import`。
+行为：只读取已存在 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不创建 task，不接收直接 prompt 或 plan，不扩散修改范围。
 
 自然语言等价触发：
 
-- “修复刚才 review 的第 1 个问题”
-- “按照这个修复 prompt 改代码”
-- “执行这条 review 修复建议”
+- “执行 task-001”
+- “执行下一个 pending task”
+- “执行刚才 review 生成的第 2 个 task”
 
-### `/ap:clean`
+执行规则：
 
-输入：`history` 或 `all`。
-行为：
+- 只能选择 `pending` 或按恢复规则允许继续的既有 task。
+- 如果用户传入直接 prompt、直接 plan 或 artifact 内容，必须停止并要求先使用 `/ap:import`。
+- 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
+- 真正开始实现前，被执行工作单元必须已有 task id、`prompt_artifact_id` 和正常状态流转记录。
 
-- `history`：保留活动 task，删除 `done` / `cancelled` task 和对应历史 artifact
-- `all`：保留目录结构与 `agent-protocol.md`，把 `.agent-memory` 重置为初始化后的空状态
+### `/ap:init`
+
+输入：无。
+行为：只初始化 `.agent-memory/`、`tasks.json` 和 artifact 目录，不安装命令适配器，不创建业务 task。
+
+### `/ap:install`
+
+输入：`--agent all|claude|mastracode|reasonix` 和 `--scope project|user`。
+行为：只安装或刷新命令适配器，不初始化 `.agent-memory`，不创建 task。
+
+### `/ap:prune`
+
+输入：无。
+行为：保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact。
+
+### `/ap:reset`
+
+输入：无。
+行为：保留 `.agent-memory/agent-protocol.md` 和目录结构，把 `tasks.json` 重置为 `{"tasks": []}` 并清空 artifact 子目录。
 
 ## Prompt 质量规则
 
@@ -242,45 +277,33 @@
 /ap:init
 ```
 
-执行后会同时完成两件事：
-
-- 初始化 `.agent-memory/`
-- 根据 `--agent` 创建对应的本地入口文件和项目级 `/ap:` 子命令
+执行后只初始化 `.agent-memory/` 本地状态。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
 
 Claude Code 入口规则：
 
 - `skills/ap:init/SKILL.md` 是默认 bootstrap 入口
 - 这个入口只负责把 `/ap:init` 暴露给 Claude，并转发到主 `agent-protocol` skill 的 Init Workflow
-- 其他 `/ap:plan`、`/ap:review`、`/ap:execute`、`/ap:fix`、`/ap:clean` 仍然通过 `init.sh` 或 `install-commands.sh` 安装到项目目录或用户目录
+- 其他 `/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
 
 脚本参数：
 
 - `--project`：必填
-- `--agent all|claude|mastracode|reasonix`：可选，默认 `all`
-
-`--agent` 对应行为：
-
-- `all`：创建 `CLAUDE.local.md`、`.mastracode/AGENTS.md`，并安装 Claude、Mastra Code、Reasonix 三个平台的子命令
-- `claude`：只创建 `CLAUDE.local.md`，只安装 `.claude/commands/`
-- `mastracode`：只创建 `.mastracode/AGENTS.md`，只安装 `.mastracode/commands/ap/`
-- `reasonix`：只安装 `.reasonix/commands/ap/`
 
 幂等规则：
 
 - 已存在的目录会跳过
 - 已存在的文件会跳过
-- 已存在的子命令文件会跳过
 - 已存在的 `.agent-memory/tasks.json` 会保留
 
 示例：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project --agent claude
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project
 ```
 
 ## 安装子命令
 
-如果你只想单独重装当前项目下的 Claude Code、Mastra Code 和 Reasonix 子命令，而不重新执行 `init`：
+安装当前项目下的 Claude Code、Mastra Code 和 Reasonix 子命令：
 
 ```bash
 bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
@@ -324,6 +347,7 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 - `project` 会写入 `.claude/`、`.mastracode/` 和 `.reasonix/`
 - `user` 会写入 `~/.claude/`、`~/.mastracode/` 和 `~/.config/reasonix/`
 - 已存在的命令文件会跳过，不覆盖
+- 已安装的旧 fix 命令文件会被删除
 - 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
 
 ## 说明
@@ -331,5 +355,5 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 - `tasks.json` 是协议内部状态唯一来源
 - `.agent-memory/artifacts/prompt/` 是给 agent 直接执行的核心输出
 - 如果 prompt 和内部 `task.spec` 冲突，以 `task.spec` 为准
-- 不支持 `/ap:` 子命令的 agent 也必须通过自然语言执行同样工作流
-- 协议公开接口默认只保留 `plan / review / execute / fix`，其余步骤由执行流程自动完成
+- 不支持 `/ap:` 子命令的 agent 也必须通过明确自然语言意图执行同样工作流
+- 协议公开接口只保留 `plan / review / import / execute / init / install / prune / reset`
