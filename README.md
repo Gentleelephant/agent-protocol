@@ -33,6 +33,12 @@
 
 - `/ap:init`：初始化本地协议目录，并安装项目级 `/ap:` 子命令
 
+对 Claude Code，仓库现在额外提供了一个顶层 bootstrap skill：
+
+- `skills/ap:init/SKILL.md`
+
+它的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init`，再由 `/ap:init` 调用主 `agent-protocol` skill 完成初始化和子命令安装。
+
 可选安装命令：
 
 - 安装 Claude / Mastra Code 子命令：`skills/agent-protocol/scripts/install-commands.sh`
@@ -205,6 +211,12 @@
 
 - 初始化 `.agent-memory/`
 - 根据 `--agent` 创建对应的本地入口文件和项目级 `/ap:` 子命令
+
+Claude Code 入口规则：
+
+- `skills/ap:init/SKILL.md` 是默认 bootstrap 入口
+- 这个入口只负责把 `/ap:init` 暴露给 Claude，并转发到主 `agent-protocol` skill 的 Init Workflow
+- 其他 `/ap:plan`、`/ap:review`、`/ap:execute`、`/ap:fix` 仍然通过 `init.sh` 或 `install-commands.sh` 安装到项目目录或用户目录
 
 脚本参数：
 

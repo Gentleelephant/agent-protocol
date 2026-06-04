@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.17
+version: v3.18
 description: "Use when the user wants to generate structured, implementable prompts from requirements or code review — producing detailed task prompts that an AI agent can execute. This skill covers the full protocol loop: analyze requirements and produce plan prompts, review code and produce fix prompts, then execute those prompts. Always trigger when users ask for task breakdown with execution prompts, code audit with fix directions, or to execute a previously generated prompt. Trigger on Chinese phrases like 审查代码, 整理开发计划, 拆解任务, 生成prompt, 修复prompt, 执行开发prompt, 按优先级执行任务, 分析需求生成可执行说明. Skip ONLY when the user explicitly says 直接改/不用创建任务/no protocol, or when the request is pure code explanation, architecture diagrams, ad-hoc debugging, or non-engineering tasks like English resume review."
 ---
 
@@ -21,6 +21,11 @@ The installed `agent-protocol` skill directory is the protocol source of truth. 
 - `references/schema/tasks.schema.json`
 - `scripts/init.sh`
 - `scripts/install-commands.sh`
+
+For Claude Code bootstrap, this repository may also provide a separate top-level
+skill at `skills/ap:init/SKILL.md`. That bootstrap skill is intentionally thin:
+it exists only so Claude can expose `/ap:init` immediately after installation,
+then delegate to this skill's Init Workflow.
 
 Read supporting files only when needed:
 
@@ -128,6 +133,12 @@ Syntax:
 /ap:init --agent claude
 /ap:init --agent mastracode
 ```
+
+Claude bootstrap note:
+
+- `skills/ap:init/SKILL.md` may expose `/ap:init` before any other `/ap:` command exists
+- that bootstrap entry should only dispatch into this Init Workflow
+- `/ap:init` remains the one-step path that initializes local protocol files and installs project-level command adapters
 
 Arguments:
 
