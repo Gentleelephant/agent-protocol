@@ -49,11 +49,12 @@
 - `/ap:init`：初始化本地协议目录，不安装命令适配器
 - `/ap:install`：安装 Claude / Mastra Code / Reasonix 子命令
 
-对 Claude Code，仓库现在额外提供了一个顶层 bootstrap skill：
+对 Claude Code，仓库现在额外提供了两个顶层 bootstrap skill：
 
 - `skills/ap:init/SKILL.md`
+- `skills/ap:install/SKILL.md`
 
-它的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init`，再由 `/ap:init` 调用主 `agent-protocol` skill 完成本地状态初始化。命令适配器安装必须走 `/ap:install` 或 `skills/agent-protocol/scripts/install-commands.sh`。
+它们的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init` 和 `/ap:install`。`/ap:init` 调用主 `agent-protocol` skill 完成本地状态初始化；`/ap:install` 调用主 `agent-protocol` skill 安装命令适配器。
 
 ## 输出物
 
@@ -281,8 +282,9 @@
 
 Claude Code 入口规则：
 
-- `skills/ap:init/SKILL.md` 是默认 bootstrap 入口
-- 这个入口只负责把 `/ap:init` 暴露给 Claude，并转发到主 `agent-protocol` skill 的 Init Workflow
+- `skills/ap:init/SKILL.md` 是初始化 bootstrap 入口
+- `skills/ap:install/SKILL.md` 是安装 bootstrap 入口
+- 这两个入口只负责把 `/ap:init` 和 `/ap:install` 暴露给 Claude，并分别转发到主 `agent-protocol` skill 的 Init Workflow 和 Install Workflow
 - 其他 `/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
 
 脚本参数：
