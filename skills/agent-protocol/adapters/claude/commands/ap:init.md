@@ -1,7 +1,7 @@
 ---
 name: ap:init
-description: "Initialize or update project-level personal protocol config. Any role."
-argument-hint: "planner=<agent> executor=<agent>"
+description: "Initialize or update project-level personal protocol config."
+argument-hint: "[--agent all|claude|mastracode]"
 ---
 
 # /ap:init
@@ -11,12 +11,13 @@ argument-hint: "planner=<agent> executor=<agent>"
 ## 工作流
 
 1. 读取 `.agent-memory/agent-protocol.md`（如存在）。
-2. 读取或保留已有兼容字段 `planner` / `executor`；这些字段仅用于兼容旧配置，不参与命令门禁。
-3. 创建或更新：
+2. 按缺失优先原则创建；若文件或目录已存在则跳过：
    - `.agent-memory/agent-protocol.md`
    - `.agent-memory/tasks.json`（仅缺失时创建 `{"tasks": []}`）
    - `.agent-memory/artifacts/` 及其 `review`、`plan`、`prompt`、`done` 子目录
-   - `CLAUDE.local.md`
-   - `.mastracode/AGENTS.md`
-4. Git 仓库下更新 `.git/info/exclude` 忽略上述文件。
-5. 不修改团队共享的 `AGENTS.md` 或 `CLAUDE.md`。
+3. 根据 `--agent` 安装项目级 `/ap:` 子命令；默认 `all`，可选 `claude`、`mastracode`。已有命令文件跳过，不覆盖。
+4. 根据 `--agent` 创建对应 agent 的本地入口文件：
+   - `claude|all` -> `CLAUDE.local.md`
+   - `mastracode|all` -> `.mastracode/AGENTS.md`
+5. Git 仓库下更新 `.git/info/exclude` 忽略上述文件。
+6. 不修改团队共享的 `AGENTS.md` 或 `CLAUDE.md`。

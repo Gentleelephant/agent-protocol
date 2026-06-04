@@ -1,6 +1,4 @@
-## 实现阶段（兼容旧引用）
-
-这个文件保留给旧引用路径使用，但当前协议默认不要求独立 Executor 角色。
+## 实现阶段
 
 ### 职责
 
@@ -23,8 +21,8 @@
 10. 更新 task 摘要、`artifact_refs`、`last_tested_at`、`implementation_notes` 和 `updated_at`。
 11. 完成后改为 `done`。
 
-### 兼容规则
+### 规则
 
-- 不再根据 agent 身份做角色门禁。
+- 不根据 agent 身份做角色门禁。
 - 不修改任务契约字段，例如 `spec`、`context`、`title`、`created_by`。
 - 不要引入额外的公共子命令来完成验证或完成记录。

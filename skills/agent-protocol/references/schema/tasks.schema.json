@@ -7,7 +7,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "type", "created_by", "status", "title", "context", "spec", "created_at", "updated_at"],
+        "required": ["id", "type", "created_by", "status", "priority", "title", "context", "spec", "artifact_refs", "created_at", "updated_at"],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -24,7 +24,7 @@
             "enum": ["high", "medium", "low"]
           },
           "created_by": {
-            "enum": ["agent", "planner"]
+            "enum": ["agent"]
           },
           "title": {
             "type": "string"

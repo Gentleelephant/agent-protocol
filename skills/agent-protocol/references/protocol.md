@@ -5,8 +5,7 @@
 默认采用单 agent 工作流：
 
 - 同一个 agent 可以 review、plan、fix、execute，并在执行中自动完成验证和完成记录
-- 不再依赖 Planner / Executor 角色门禁
-- 如果项目里还保留 `planner` / `executor` 字段，它们只作为兼容信息展示，不作为执行限制
+- 不区分 Planner / Executor 角色
 
 ## 共享记忆位置
 
@@ -33,7 +32,7 @@
 {
   "id": "task-001",
   "type": "review|feature|design|bug",
-  "created_by": "agent|planner",
+  "created_by": "agent",
   "status": "pending|in_progress|blocked|done|cancelled",
   "priority": "high|medium|low",
   "title": "简短描述",
@@ -48,7 +47,7 @@
 }
 ```
 
-新任务默认写 `created_by: "agent"`。旧任务若保留 `created_by: "planner"`，按兼容模式继续读取。
+新任务统一写 `created_by: "agent"`。
 
 ## Artifact 结构
 
@@ -85,7 +84,7 @@
 .agent-memory/artifacts/prompt/
 ```
 
-这个 prompt 必须明确：
+这个 prompt 必须持久化保存，并明确：
 
 - 要解决什么问题
 - 允许改哪些范围
@@ -114,6 +113,7 @@ summary:
 
 ```text
 ## Goal
+## Priority
 ## Scope
 ## Problem
 ## Constraints
@@ -128,6 +128,7 @@ summary:
 - `task.spec` 仍然是 task 的规范来源，prompt artifact 是给实现阶段直接使用的展开版说明。
 - prompt 不应与 `task.spec` 冲突；若冲突，以 `task.spec` 为准并回报不一致。
 - prompt 必须具体到文件、模块、行为和验证标准，不能只写笼统建议。
+- `/ap:plan` 和 `/ap:review` 无论通过子命令还是自然语言等价意图触发，都必须把对应 artifact 持久化写入 `.agent-memory/artifacts/`。
 
 ## 状态流转
 
@@ -148,6 +149,7 @@ pending|blocked|in_progress → cancelled
 
 - `tasks.json` 是任务索引和状态流转的唯一来源
 - `artifact` 保存完整结果，task 只保留摘要和引用
+- 开发计划、review 结果和 execution prompt 必须落盘保存，不能只留在对话上下文
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 
@@ -158,4 +160,3 @@ pending|blocked|in_progress → cancelled
 - `tasks.json` 非法：停止副作用操作，说明需要修复的位置。
 - task 引用缺失的 artifact：提示引用失效，但不要中断只读查询。
 - task id 有间断：从最大编号继续递增。
-- `.agent-memory/agent-protocol.md` 中若存在 legacy `planner` / `executor` 绑定，不要用它们拒绝执行。

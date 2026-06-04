@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.16
+version: v3.17
 description: "Use when the user wants to generate structured, implementable prompts from requirements or code review — producing detailed task prompts that an AI agent can execute. This skill covers the full protocol loop: analyze requirements and produce plan prompts, review code and produce fix prompts, then execute those prompts. Always trigger when users ask for task breakdown with execution prompts, code audit with fix directions, or to execute a previously generated prompt. Trigger on Chinese phrases like 审查代码, 整理开发计划, 拆解任务, 生成prompt, 修复prompt, 执行开发prompt, 按优先级执行任务, 分析需求生成可执行说明. Skip ONLY when the user explicitly says 直接改/不用创建任务/no protocol, or when the request is pure code explanation, architecture diagrams, ad-hoc debugging, or non-engineering tasks like English resume review."
 ---
 
@@ -20,13 +20,14 @@ The installed `agent-protocol` skill directory is the protocol source of truth. 
 - `references/examples/review-fix-prompt.example.md`
 - `references/schema/tasks.schema.json`
 - `scripts/init.sh`
+- `scripts/install-commands.sh`
 
 Read supporting files only when needed:
 
 - Read `references/protocol.md` when lifecycle, task ownership, artifact storage, or recovery rules are unclear.
-- Read `references/roles/planner.md` before detailed review, planning, or verification work.
+- Read `references/roles/planner.md` before detailed review or planning work.
 - Read `references/roles/executor.md` before implementing pending tasks or recovering in-progress work.
-- Read `references/execution-prompt-template.md` when generating or consuming executor-ready prompt artifacts.
+- Read `references/execution-prompt-template.md` when generating or consuming implementation prompt artifacts.
 - Read `references/examples/plan-execution-prompt.example.md` or `references/examples/review-fix-prompt.example.md` when you need a concrete example of a high-quality prompt artifact.
 - Read `references/schema/tasks.schema.json` before validating or repairing `.agent-memory/tasks.json`.
 
@@ -72,7 +73,7 @@ Default trigger rules:
 
 If the user asks to install agent-protocol commands or subcommands, copy the command files and report what was installed. Do not create tasks. See Install Workflow below.
 
-If the user asks for planning, review, task creation, or handoff, do not edit production code. Append tasks and write artifacts.
+If the user asks for planning, review, task creation, or handoff, do not edit production code. Append tasks and persist artifacts to disk.
 
 If the user asks to implement pending tasks or continue work, update task state and implement against the task contract.
 
@@ -98,11 +99,13 @@ All parameters are optional. When a parameter is omitted, the command uses the d
 - `/ap:plan [requirement]`: analyze requirements or architecture and create feature/design tasks. Also write a plan artifact under `.agent-memory/artifacts/plan/` and an execution prompt artifact under `.agent-memory/artifacts/prompt/`. Omitted requirement means extract from recent conversation context.
 - `/ap:execute [task-id|next]`: claim and execute pending tasks; omitted target means `next`.
 - `/ap:fix [task-id]`: fix a specific bug/review task; omitted target means the matching claimed (`in_progress`) or pending bug/review task.
-- `/ap:init planner=<agent> executor=<agent>`: initialize or update personal protocol files and project-local private config. `planner` and `executor` are legacy compatibility metadata; they are not used for command gating.
+- `/ap:init`: initialize or update personal protocol files, project-local private config, and project-level `/ap:` subcommands.
 
 By default, only `/ap:` command flows persist artifacts. Equivalent natural-language requests may create or update tasks, but should not silently create artifact files unless they are handled through the protocol path.
 
 Exception: when the current agent does not support subcommands, equivalent natural-language requests must be treated as the protocol path and should persist the same tasks and artifacts that `/ap:` would have produced.
+
+When `/ap:plan` or `/ap:review` runs through the protocol path, the generated plan/review records and execution prompts must be saved under `.agent-memory/artifacts/`; do not keep them only in conversation output.
 
 ## Command Execution Rule
 
@@ -112,7 +115,7 @@ Before executing any `/ap:` command with side effects, except `/ap:init`:
 2. Use `tasks.json` as the task state source of truth.
 3. Use `.agent-memory/artifacts/` as the detailed evidence and prompt store.
 4. Do not block execution based on agent identity. The same agent may review, plan, fix, execute, test, verify, and mark done.
-5. If the project still contains legacy Planner/Executor fields, treat them as informational only.
+5. Do not require role-specific configuration to run the workflow.
 
 ## Init Workflow
 
@@ -121,18 +124,17 @@ Before executing any `/ap:` command with side effects, except `/ap:init`:
 Syntax:
 
 ```text
-/ap:init planner=<agent> executor=<agent>
+/ap:init
+/ap:init --agent claude
+/ap:init --agent mastracode
 ```
 
-Examples:
+Arguments:
 
-```text
-/ap:init planner="Claude Code" executor="Mastra Code"
-```
+- `--project`: required by the shell script entrypoint
+- `--agent all|claude|mastracode`: optional, default `all`
 
-If `planner` or `executor` is omitted, preserve the existing value when present. These fields are legacy compatibility metadata and are not used for command gating.
-
-When running `/ap:init`, create or update these project-local private files:
+When running `/ap:init`, create these project-local private files when missing and skip them when already present:
 
 ```text
 .agent-memory/agent-protocol.md
@@ -142,25 +144,40 @@ CLAUDE.local.md
 .mastracode/AGENTS.md
 ```
 
-If the current directory is a git repo, add these patterns to `.git/info/exclude` if missing:
+Also install project-level command files to the selected agent target. Existing command files should be skipped instead of overwritten:
+
+```text
+.claude/commands/
+.mastracode/commands/ap/
+```
+
+Selected agent behavior:
+
+- `all`: create both local entry files and install both command sets
+- `claude`: create `CLAUDE.local.md` and install `.claude/commands/`
+- `mastracode`: create `.mastracode/AGENTS.md` and install `.mastracode/commands/ap/`
+
+If the current directory is a git repo, ensure `.git/info/exclude` exists and add these patterns if missing:
 
 ```text
 .agent-memory/
+.claude/
+.mastracode/
 CLAUDE.local.md
-.mastracode/AGENTS.md
 ```
 
 Do not edit team-shared project `AGENTS.md` or `CLAUDE.md`.
 
-`/ap:init` should preserve existing `.agent-memory/tasks.json`. Create it as `{"tasks": []}` only when it is missing.
+`/ap:init` should preserve existing `.agent-memory/tasks.json`. Create it as `{"tasks": []}` only when it is missing. Existing directories, local instruction files, and command files should be treated as already initialized and skipped.
 
-After init, summarize the existing compatibility metadata if present, the created or updated files, and whether `.git/info/exclude` was updated.
+After init, summarize the selected agent scope, the created vs skipped files, and whether `.git/info/exclude` was updated.
 
 Init file content requirements:
 
-- `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include skill as protocol source, project-local task paths, single-agent-friendly execution rules, and project-local privacy rules. Legacy Planner/Executor fields may remain for compatibility but must not be used for gating.
+- `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include skill as protocol source, project-local task paths, single-agent-friendly execution rules, and project-local privacy rules.
 - `.agent-memory/artifacts/`: create review/plan/prompt/done subdirectories for persistent command artifacts.
 - `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, list `/ap:` commands, and state that one agent may perform the full workflow.
+- `.claude/commands/`, `.mastracode/commands/ap/`: install the packaged `/ap:` command adapters for the selected agent target.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
 ## Install Workflow
@@ -171,16 +188,19 @@ Workflow:
 
 1. Detect the current agent from runtime context.
 2. If the user specifies a platform (`claude`, `mastracode`), install only that platform. Default: install both (`all`).
-3. Locate this skill's install directory. The command files live at `<skill-root>/adapters/`.
+3. Prefer running `<skill-root>/scripts/install-commands.sh` instead of manually copying files.
 4. Determine scope:
    - If the user mentions `user` or `global`: install to user-level (`~/.claude/`, `~/.mastracode/`)
    - Default: install to project-level (`.claude/`, `.mastracode/`)
-5. Copy files:
-   - Claude Code: copy `<skill-root>/adapters/claude/commands/ap:*.md` to `<base>/commands/`
-   - Mastra Code: copy `<skill-root>/adapters/mastracode/commands/ap/*.md` to `<base>/commands/ap/`
-6. Report what was installed and where.
+5. Run:
+   - `bash <skill-root>/scripts/install-commands.sh`
+   - `bash <skill-root>/scripts/install-commands.sh --agent claude`
+   - `bash <skill-root>/scripts/install-commands.sh --agent mastracode`
+   - add `--scope user` when the user asked for user-level install
+6. Existing command files should be skipped instead of overwritten.
+7. Report what was installed and where.
 
-Do not create tasks for this action. Do not edit repository code. Do not run `/ap:init` unless the user also asked to initialize.
+Do not create tasks for this action. Do not edit repository code. Use `/ap:init` when the user wants one-step initialization plus project-level command installation; use `install-commands.sh` only for standalone command refresh or alternate scope.
 
 ## Execution Prompt Contract
 
@@ -221,6 +241,7 @@ Prompt quality requirements:
 - `Suggested Fix` must recommend a preferred implementation path, not generic advice.
 - `Validation` must include concrete tests, checks, commands, or observable acceptance criteria.
 - The prompt must be strong enough that another agent can execute it without re-inferring the task.
+- The prompt artifact must be written to disk before the planning/review command is considered complete.
 
 Prompt artifact header should include:
 
@@ -246,11 +267,13 @@ summary:
 4. Ensure `.agent-memory/artifacts/` and the relevant subdirectory for the command exist, including `.agent-memory/artifacts/prompt/` when creating actionable tasks.
 5. Validate the task file against `references/schema/tasks.schema.json` when possible. If it is invalid, report the problem and do not append tasks until it is repaired.
 6. Append new tasks only. Do not overwrite existing tasks.
-7. Use `status: "pending"` and `created_by: "agent"` for new tasks. Existing legacy tasks with `created_by: "planner"` remain valid.
+7. Use `status: "pending"` and `created_by: "agent"` for new tasks.
 8. Fill `id`, `type`, `priority`, `title`, `context`, `spec`, `created_at`, and `updated_at`.
 9. For `/ap:review` and `/ap:plan`, also write a Markdown artifact under `.agent-memory/artifacts/` and store its identifier in `artifact_refs`.
 10. For each actionable task created by `/ap:review` or `/ap:plan`, also write an `execution_prompt` artifact under `.agent-memory/artifacts/prompt/` and store its identifier in `artifact_refs`.
 11. Do not fill `implementation_notes` unless preserving an existing value.
+
+New tasks must always include `priority` and `artifact_refs`; task consumers rely on them for ordering and prompt lookup.
 
 Prompt generation rules for `/ap:plan`:
 
@@ -340,7 +363,6 @@ Read state from `tasks.json` first. Read details from referenced artifacts.
 - If `.agent-memory/artifacts/` is missing, create the required subdirectories before writing artifacts.
 - If `.agent-memory/tasks.json` is invalid JSON or violates the schema, stop before side effects and report the exact repair needed.
 - If task ids have gaps, continue from the highest numeric suffix plus one.
-- If `.agent-memory/agent-protocol.md` contains legacy Planner/Executor bindings, do not use them to reject execution.
 - If a task is blocked, set `status: "blocked"` and explain the blocker in `implementation_notes`.
 - If a blocked task becomes actionable, the implementing agent may move it back to `in_progress`.
 - If an `artifact_refs` entry points to a missing file, warn in read-only output but do not fail the command.
@@ -351,6 +373,6 @@ When task-creation commands create tasks, summarize the task ids and titles.
 
 When implementation commands complete tasks, summarize changed files, verification, and task statuses.
 
-Do not require the user to say "use agent-protocol" or mention Planner/Executor when the intent clearly matches the default trigger rules.
+Do not require the user to say "use agent-protocol" or mention any role when the intent clearly matches the default trigger rules.
 
-Keep `tasks.json` as the task state source and `.agent-memory/artifacts/` as the detailed evidence store; do not rely on conversation memory for handoff-critical details.
+Keep `tasks.json` as the task state source and `.agent-memory/artifacts/` as the detailed evidence store; do not rely on conversation memory for handoff-critical details. Development plans, review results, and execution prompts are not complete until they are saved there.

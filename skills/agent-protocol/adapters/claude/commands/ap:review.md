@@ -22,6 +22,6 @@ argument-hint: "[scope]"
 4. 检查代码，发现问题创建 task（type: `review`），追加到 tasks 数组。
 5. 为本次 review 生成 artifact，记录完整审查结论、问题列表、严重级别、涉及文件。
 6. 为每个可执行问题单独生成一个 `execution_prompt` artifact，要求边界清晰、问题描述清晰、建议修复方式清晰，并写明推荐执行命令（通常是 `/ap:fix <task-id>`）。
-7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`，并把 review artifact 和 prompt artifact 引用都写入 `artifact_refs`。旧 task 若仍是 `created_by: "planner"`，按兼容模式保留。
+7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`，并把 review artifact 和 prompt artifact 引用都写入 `artifact_refs`。
 8. 更新相关 task 的 `last_reviewed_at`。
 9. 不修改业务代码，仅创建 review task。

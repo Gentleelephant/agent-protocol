@@ -31,7 +31,11 @@
 
 可选初始化命令：
 
-- `/ap:init`：初始化本地协议目录
+- `/ap:init`：初始化本地协议目录，并安装项目级 `/ap:` 子命令
+
+可选安装命令：
+
+- 安装 Claude / Mastra Code 子命令：`skills/agent-protocol/scripts/install-commands.sh`
 
 ## 输出物
 
@@ -50,6 +54,8 @@
 
 - `/ap:plan` 为每个开发任务生成一个执行 prompt
 - `/ap:review` 为每个问题生成一个修复 prompt
+- `/ap:plan` 和 `/ap:review` 生成的开发计划、review 结果和 prompt 必须持久化保存到 `.agent-memory/artifacts/`
+- 不支持 `/ap:` 子命令的 agent 走自然语言等价流程时，也必须保存到同样的位置
 - `/ap:execute` 和 `/ap:fix` 优先读取关联 prompt，并在执行后自动完成验证与完成记录
 - 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
 
@@ -194,13 +200,70 @@
 /ap:init
 ```
 
-兼容旧参数：
+`/ap:init` 不接受额外角色参数，协议默认就是单 agent 模式。
+执行后会同时完成两件事：
 
-```text
-/ap:init planner="Claude Code" executor="Mastra Code"
+- 初始化 `.agent-memory/`
+- 根据 `--agent` 创建对应的本地入口文件和项目级 `/ap:` 子命令
+
+脚本参数：
+
+- `--project`：必填
+- `--agent all|claude|mastracode`：可选，默认 `all`
+
+`--agent` 对应行为：
+
+- `all`：创建 `CLAUDE.local.md`、`.mastracode/AGENTS.md`，并安装两个平台的子命令
+- `claude`：只创建 `CLAUDE.local.md`，只安装 `.claude/commands/`
+- `mastracode`：只创建 `.mastracode/AGENTS.md`，只安装 `.mastracode/commands/ap/`
+
+幂等规则：
+
+- 已存在的目录会跳过
+- 已存在的文件会跳过
+- 已存在的子命令文件会跳过
+- 已存在的 `.agent-memory/tasks.json` 会保留
+
+示例：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project --agent claude
 ```
 
-这两个参数只作为兼容信息保留，不参与门禁。
+## 安装子命令
+
+如果你只想单独重装当前项目下的 Claude Code 和 Mastra Code 子命令，而不重新执行 `init`：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
+```
+
+只安装 Claude Code：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent claude
+```
+
+只安装 Mastra Code：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mastracode
+```
+
+安装到用户级目录而不是项目目录：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --scope user
+```
+
+规则：
+
+- 默认 `--agent all`
+- 默认 `--scope project`
+- `project` 会写入 `.claude/` 和 `.mastracode/`
+- `user` 会写入 `~/.claude/` 和 `~/.mastracode/`
+- 已存在的命令文件会跳过，不覆盖
+- 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
 
 ## 说明
 

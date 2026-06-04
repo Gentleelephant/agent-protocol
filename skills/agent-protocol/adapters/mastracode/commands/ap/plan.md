@@ -22,5 +22,5 @@ argument-hint: "[requirement]"
 4. 分析需求，创建 task（type: `feature` 或 `design`），追加到 tasks 数组。
 5. 为本次分析生成 artifact，记录拆解依据、方案权衡和最终任务集合。
 6. 为每个 task 生成一个 `execution_prompt` artifact，要求目标、范围、约束、建议修复方式或实现方式、验证标准都明确，并写明推荐执行命令（通常是 `/ap:execute <task-id>`）。
-7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`，并把 plan artifact 和 prompt artifact 引用写入相关 task。旧 task 若仍是 `created_by: "planner"`，按兼容模式保留。
+7. 设置 `status: "pending"`、`created_by: "agent"`，填充 `id`、`title`、`context`、`spec`，并把 plan artifact 和 prompt artifact 引用写入相关 task。
 8. 不修改业务代码。
