@@ -5,6 +5,7 @@ set -euo pipefail
 #   skills/agent-protocol/scripts/install-commands.sh
 #   skills/agent-protocol/scripts/install-commands.sh --agent claude
 #   skills/agent-protocol/scripts/install-commands.sh --agent mastracode --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --agent reasonix --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent all --scope project
 
 AGENT="all"
@@ -39,10 +40,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$AGENT" in
-  claude|mastracode|all)
+  claude|mastracode|reasonix|all)
     ;;
   *)
-    echo "error: --agent must be one of: claude, mastracode, all" >&2
+    echo "error: --agent must be one of: claude, mastracode, reasonix, all" >&2
     exit 1
     ;;
 esac
@@ -59,9 +60,11 @@ esac
 if [ "$SCOPE" = "project" ]; then
   CLAUDE_BASE=".claude"
   MASTRA_BASE=".mastracode"
+  REASONIX_BASE=".reasonix"
 else
   CLAUDE_BASE="$HOME/.claude"
   MASTRA_BASE="$HOME/.mastracode"
+  REASONIX_BASE="$HOME/.config/reasonix"
 fi
 
 install_claude() {
@@ -96,6 +99,22 @@ install_mastracode() {
   done
 }
 
+install_reasonix() {
+  local base="$1"
+  local target_dir="$base/commands/ap"
+  mkdir -p "$target_dir"
+  echo "  - Reasonix -> $target_dir"
+  for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
+    local dest="$target_dir/$(basename "$src")"
+    if [ -e "$dest" ]; then
+      echo "    - $(basename "$src") 已存在，跳过"
+    else
+      cp "$src" "$dest"
+      echo "    - $(basename "$src") 已创建"
+    fi
+  done
+}
+
 echo "✓ agent-protocol 子命令已安装"
 echo "  - scope: $SCOPE"
 
@@ -105,4 +124,8 @@ fi
 
 if [ "$AGENT" = "mastracode" ] || [ "$AGENT" = "all" ]; then
   install_mastracode "$MASTRA_BASE"
+fi
+
+if [ "$AGENT" = "reasonix" ] || [ "$AGENT" = "all" ]; then
+  install_reasonix "$REASONIX_BASE"
 fi

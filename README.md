@@ -40,7 +40,7 @@
 
 可选安装命令：
 
-- 安装 Claude / Mastra Code 子命令：`skills/agent-protocol/scripts/install-commands.sh`
+- 安装 Claude / Mastra Code / Reasonix 子命令：`skills/agent-protocol/scripts/install-commands.sh`
 
 ## 输出物
 
@@ -240,13 +240,14 @@ Claude Code 入口规则：
 脚本参数：
 
 - `--project`：必填
-- `--agent all|claude|mastracode`：可选，默认 `all`
+- `--agent all|claude|mastracode|reasonix`：可选，默认 `all`
 
 `--agent` 对应行为：
 
-- `all`：创建 `CLAUDE.local.md`、`.mastracode/AGENTS.md`，并安装两个平台的子命令
+- `all`：创建 `CLAUDE.local.md`、`.mastracode/AGENTS.md`，并安装 Claude、Mastra Code、Reasonix 三个平台的子命令
 - `claude`：只创建 `CLAUDE.local.md`，只安装 `.claude/commands/`
 - `mastracode`：只创建 `.mastracode/AGENTS.md`，只安装 `.mastracode/commands/ap/`
+- `reasonix`：只安装 `.reasonix/commands/ap/`
 
 幂等规则：
 
@@ -263,7 +264,7 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 ## 安装子命令
 
-如果你只想单独重装当前项目下的 Claude Code 和 Mastra Code 子命令，而不重新执行 `init`：
+如果你只想单独重装当前项目下的 Claude Code、Mastra Code 和 Reasonix 子命令，而不重新执行 `init`：
 
 ```bash
 bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
@@ -281,6 +282,19 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mastracode
 ```
 
+只安装 Reasonix：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent reasonix
+```
+
+Reasonix 自定义命令规则：
+
+- 项目级命令写入 `.reasonix/commands/ap/*.md`
+- 用户级命令写入 `~/.config/reasonix/commands/ap/*.md`
+- 子目录构成命名空间，例如 `ap/plan.md` 对应 `/ap:plan`
+- Markdown 文件正文就是 prompt 模板；Reasonix 适配文件不包含 frontmatter
+
 安装到用户级目录而不是项目目录：
 
 ```bash
@@ -291,8 +305,8 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 - 默认 `--agent all`
 - 默认 `--scope project`
-- `project` 会写入 `.claude/` 和 `.mastracode/`
-- `user` 会写入 `~/.claude/` 和 `~/.mastracode/`
+- `project` 会写入 `.claude/`、`.mastracode/` 和 `.reasonix/`
+- `user` 会写入 `~/.claude/`、`~/.mastracode/` 和 `~/.config/reasonix/`
 - 已存在的命令文件会跳过，不覆盖
 - 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
 

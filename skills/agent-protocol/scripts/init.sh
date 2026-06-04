@@ -5,6 +5,7 @@ set -euo pipefail
 #   skills/agent-protocol/scripts/init.sh --project
 #   skills/agent-protocol/scripts/init.sh --project --agent claude
 #   skills/agent-protocol/scripts/init.sh --project --agent mastracode
+#   skills/agent-protocol/scripts/init.sh --project --agent reasonix
 
 PROJECT_MODE=0
 AGENT="all"
@@ -38,10 +39,10 @@ if [ "$PROJECT_MODE" -ne 1 ]; then
 fi
 
 case "$AGENT" in
-  claude|mastracode|all)
+  claude|mastracode|reasonix|all)
     ;;
   *)
-    echo "error: --agent must be one of: claude, mastracode, all" >&2
+    echo "error: --agent must be one of: claude, mastracode, reasonix, all" >&2
     exit 1
     ;;
 esac
@@ -172,6 +173,15 @@ install_mastracode_commands() {
   done
 }
 
+install_reasonix_commands() {
+  ensure_dir ".reasonix"
+  ensure_dir ".reasonix/commands"
+  ensure_dir ".reasonix/commands/ap"
+  for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
+    copy_if_missing "$src" ".reasonix/commands/ap/$(basename "$src")"
+  done
+}
+
 echo "✓ 项目级个人配置初始化"
 echo "  - agent: $AGENT"
 
@@ -201,10 +211,14 @@ if [ "$AGENT" = "mastracode" ] || [ "$AGENT" = "all" ]; then
   install_mastracode_commands
 fi
 
+if [ "$AGENT" = "reasonix" ] || [ "$AGENT" = "all" ]; then
+  install_reasonix_commands
+fi
+
 if [ -d ".git" ]; then
   mkdir -p ".git/info"
   touch ".git/info/exclude"
-  for pattern in ".agent-memory/" ".claude/" ".mastracode/" "CLAUDE.local.md"; do
+  for pattern in ".agent-memory/" ".claude/" ".mastracode/" ".reasonix/" "CLAUDE.local.md"; do
     if ! grep -Fxq "$pattern" ".git/info/exclude"; then
       printf "%s\n" "$pattern" >> ".git/info/exclude"
     fi

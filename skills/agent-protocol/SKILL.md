@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.18
+version: v3.19
 description: "Use when the user wants to generate structured, implementable prompts from requirements or code review — producing detailed task prompts that an AI agent can execute. This skill covers the full protocol loop: analyze requirements and produce plan prompts, review code and produce fix prompts, then execute those prompts. Always trigger when users ask for task breakdown with execution prompts, code audit with fix directions, or to execute a previously generated prompt. Trigger on Chinese phrases like 审查代码, 整理开发计划, 拆解任务, 生成prompt, 修复prompt, 执行开发prompt, 按优先级执行任务, 分析需求生成可执行说明. Skip ONLY when the user explicitly says 直接改/不用创建任务/no protocol, or when the request is pure code explanation, architecture diagrams, ad-hoc debugging, or non-engineering tasks like English resume review."
 ---
 
@@ -46,6 +46,7 @@ Do not require team-shared project `AGENTS.md` or `CLAUDE.md`. This protocol is 
 
 - `CLAUDE.local.md` for Claude Code
 - `.mastracode/AGENTS.md` for Mastra Code
+- `.reasonix/commands/ap/` for Reasonix project commands
 
 If the project has no task state and the user wants protocol handoff, run `/ap:init` or tell the user to run:
 
@@ -136,6 +137,7 @@ Syntax:
 /ap:init
 /ap:init --agent claude
 /ap:init --agent mastracode
+/ap:init --agent reasonix
 ```
 
 Claude bootstrap note:
@@ -147,7 +149,7 @@ Claude bootstrap note:
 Arguments:
 
 - `--project`: required by the shell script entrypoint
-- `--agent all|claude|mastracode`: optional, default `all`
+- `--agent all|claude|mastracode|reasonix`: optional, default `all`
 
 When running `/ap:init`, create these project-local private files when missing and skip them when already present:
 
@@ -157,6 +159,7 @@ When running `/ap:init`, create these project-local private files when missing a
 .agent-memory/artifacts/
 CLAUDE.local.md
 .mastracode/AGENTS.md
+.reasonix/commands/ap/
 ```
 
 Also install project-level command files to the selected agent target. Existing command files should be skipped instead of overwritten:
@@ -164,13 +167,15 @@ Also install project-level command files to the selected agent target. Existing 
 ```text
 .claude/commands/
 .mastracode/commands/ap/
+.reasonix/commands/ap/
 ```
 
 Selected agent behavior:
 
-- `all`: create both local entry files and install both command sets
+- `all`: create local entry files and install Claude, Mastra Code, and Reasonix command sets
 - `claude`: create `CLAUDE.local.md` and install `.claude/commands/`
 - `mastracode`: create `.mastracode/AGENTS.md` and install `.mastracode/commands/ap/`
+- `reasonix`: install `.reasonix/commands/ap/`
 
 If the current directory is a git repo, ensure `.git/info/exclude` exists and add these patterns if missing:
 
@@ -178,6 +183,7 @@ If the current directory is a git repo, ensure `.git/info/exclude` exists and ad
 .agent-memory/
 .claude/
 .mastracode/
+.reasonix/
 CLAUDE.local.md
 ```
 
@@ -192,7 +198,7 @@ Init file content requirements:
 - `.agent-memory/agent-protocol.md`: keep this as a small project binding file. Include skill as protocol source, project-local task paths, execution rules, and project-local privacy rules.
 - `.agent-memory/artifacts/`: create review/plan/prompt/done subdirectories for persistent command artifacts.
 - `CLAUDE.local.md`, `.mastracode/AGENTS.md`: keep these short; they should point to `.agent-memory/agent-protocol.md`, mention default trigger behavior, and list `/ap:` commands.
-- `.claude/commands/`, `.mastracode/commands/ap/`: install the packaged `/ap:` command adapters for the selected agent target.
+- `.claude/commands/`, `.mastracode/commands/ap/`, `.reasonix/commands/ap/`: install the packaged `/ap:` command adapters for the selected agent target. Reasonix uses namespace directories, so `ap/plan.md` becomes `/ap:plan`.
 - `.agent-memory/tasks.json`: preserve existing tasks. If missing, create exactly `{"tasks": []}`.
 
 ## Install Workflow
@@ -202,15 +208,16 @@ When the user asks to install agent-protocol commands or subcommands, this is a 
 Workflow:
 
 1. Detect the current agent from runtime context.
-2. If the user specifies a platform (`claude`, `mastracode`), install only that platform. Default: install both (`all`).
+2. If the user specifies a platform (`claude`, `mastracode`, `reasonix`), install only that platform. Default: install all supported platforms (`all`).
 3. Prefer running `<skill-root>/scripts/install-commands.sh` instead of manually copying files.
 4. Determine scope:
-   - If the user mentions `user` or `global`: install to user-level (`~/.claude/`, `~/.mastracode/`)
-   - Default: install to project-level (`.claude/`, `.mastracode/`)
+   - If the user mentions `user` or `global`: install to user-level (`~/.claude/`, `~/.mastracode/`, `~/.config/reasonix/`)
+   - Default: install to project-level (`.claude/`, `.mastracode/`, `.reasonix/`)
 5. Run:
    - `bash <skill-root>/scripts/install-commands.sh`
    - `bash <skill-root>/scripts/install-commands.sh --agent claude`
    - `bash <skill-root>/scripts/install-commands.sh --agent mastracode`
+   - `bash <skill-root>/scripts/install-commands.sh --agent reasonix`
    - add `--scope user` when the user asked for user-level install
 6. Existing command files should be skipped instead of overwritten.
 7. Report what was installed and where.
