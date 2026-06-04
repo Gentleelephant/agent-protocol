@@ -1,193 +1,211 @@
 # agent-protocol
 
-Claude Code、Mastra Code 之间的项目级个人协作协议。
+一个围绕 4 个核心命令组织的 agent 协议：
 
-## 项目结构
+- `/ap:plan`：根据用户需求和项目代码，生成开发计划和可执行 prompt
+- `/ap:review`：review 代码，输出 review 结果和修复 prompt
+- `/ap:execute`：执行 `/ap:plan` 生成的 prompt
+- `/ap:fix`：执行 `/ap:review` 生成的 prompt
+
+默认是单 agent 工作流。同一个 agent 可以从分析一直做到执行和验收。
+
+对于不支持子命令的 agent，例如 Codex，也必须支持。做法不是依赖 `/ap:` 语法，而是把这些命令视为自然语言意图：
+
+- “根据这个需求结合项目代码整理开发计划” = `/ap:plan`
+- “review 这段代码并给出修复 prompt” = `/ap:review`
+- “执行刚才 plan 产出的 prompt” = `/ap:execute`
+- “执行刚才 review 产出的修复 prompt” = `/ap:fix`
+
+## 核心结构
+
+主线只有两条：
+
+1. 需求实现链路：`plan -> execute`
+2. 代码修复链路：`review -> fix`
+
+无子命令兼容规则：
+
+- 支持 `/ap:` 子命令的 agent，优先用子命令
+- 不支持 `/ap:` 子命令的 agent，必须通过自然语言完成同样效果
+- 无论走哪种入口，输出物和 prompt 质量要求必须一致
+
+可选初始化命令：
+
+- `/ap:init`：初始化本地协议目录
+
+## 输出物
+
+协议对外的关键不是内部 task 记录，而是可直接执行的 prompt。
+
+生成位置：
 
 ```text
-agent-protocol/
-├── skills/
-│   └── agent-protocol/
-│       ├── SKILL.md             # 协议唯一来源（工作流、角色门禁、任务结构）
-│       ├── scripts/init.sh
-│       ├── references/
-│       └── adapters/            # 命令文件随 skill 分发
-│           ├── claude/commands/
-│           │   ├── ap:done.md   # → /ap:done
-│           │   ├── ap:review.md
-│           │   └── ...
-│           └── mastracode/commands/ap/
-│               ├── done.md      # → /ap:done
-│               ├── review.md
-│               └── ...
-└── README.md
+.agent-memory/tasks.json
+.agent-memory/artifacts/plan/
+.agent-memory/artifacts/review/
+.agent-memory/artifacts/prompt/
 ```
 
-## 核心模式
+规则：
 
-`skills/agent-protocol/SKILL.md` 是协议唯一来源。命令文件内嵌在 skill 中（`adapters/`），随 skill 一起分发。用户只需安装这一个 skill，首次使用时告诉 agent "安装 agent-protocol 子命令"，之后全程使用 `/ap:` 命令协作。
+- `/ap:plan` 为每个开发任务生成一个执行 prompt
+- `/ap:review` 为每个问题生成一个修复 prompt
+- `/ap:execute` 和 `/ap:fix` 优先读取关联 prompt，并在执行后自动完成验证与完成记录
+- 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
 
-## 安装
+## 四个核心命令
 
-1. 安装 `skills/agent-protocol/` 到对应平台：
-   - Claude Code → `~/.claude/skills/agent-protocol/`
-   - Mastra Code → `~/.mastracode/skills/agent-protocol/`
+### `/ap:plan`
 
-2. 在任一 agent 中说：
+输入：用户给出的需求、目标或设计意图。
+行为：结合项目代码、现有结构、依赖和边界，拆成开发任务，并生成指导其他 agent 执行的 prompt。
 
-> 安装 agent-protocol 子命令
+自然语言等价触发：
 
-Agent 会自动把 `/ap:` 命令安装到当前项目。
+- “帮我根据这个需求整理开发计划”
+- “结合当前代码拆解实现方案”
+- “给我一组可以让别的 agent 直接执行的开发 prompt”
 
-3. 初始化项目：
+`plan` 产物必须包含：
+
+- 任务标题
+- 优先级
+- 背景和目标
+- 明确范围
+- 建议实现方式
+- 验收标准
+- 推荐执行命令，通常是 `/ap:execute <plan-prompt>`
+
+### `/ap:review`
+
+输入：代码范围、模块、最近改动或整个项目。
+行为：输出 review 结果，并为每个明确问题生成修复 prompt。
+
+自然语言等价触发：
+
+- “review 这段代码”
+- “检查这个模块有没有问题，并给出修复 prompt”
+- “审查最近改动并整理可执行修复项”
+
+`review` 产物必须包含：
+
+- 问题描述
+- 影响范围
+- 风险级别
+- 复现或观察依据
+- 修复建议
+- 验收方式
+- 推荐执行命令，通常是 `/ap:fix <review-prompt>`
+
+### `/ap:execute`
+
+输入：`plan` 生成的 prompt。
+行为：读取 prompt，并按约束实现需求，不扩散修改范围。
+
+自然语言等价触发：
+
+- “执行刚才 plan 生成的第 2 条 prompt”
+- “按照这个开发 prompt 去实现”
+- “根据这个开发 prompt 继续做代码实现”
+
+### `/ap:fix`
+
+输入：`review` 生成的 prompt。
+行为：读取 prompt，针对问题修复，不顺手做无关重构。
+
+自然语言等价触发：
+
+- “修复刚才 review 的第 1 个问题”
+- “按照这个修复 prompt 改代码”
+- “执行这条 review 修复建议”
+
+## Prompt 质量规则
+
+这是协议里最重要的部分。
+
+一个高质量 prompt 必须做到 4 件事：
+
+1. 问题定义清楚
+   不能写“优化这里”或“修一下这个逻辑”，必须写出当前行为、期望行为、风险或症状。
+
+2. 边界清楚
+   必须明确允许改哪些文件、模块、接口、测试；明确哪些内容不能动。
+
+3. 指导性强
+   不是只指出问题，还要给出建议修复路径、优先方案、兼容要求和验证方法。
+
+4. 可验收
+   必须给出测试、检查步骤或可观察的完成标准。
+
+## Prompt 标准结构
+
+每个执行 prompt 至少包含：
+
+- `Goal`
+- `Priority`
+- `Scope`
+- `Problem`
+- `Constraints`
+- `Suggested Fix`
+- `Validation`
+- `Deliverable`
+- `Command Hint`
+
+示例可参考：
+
+- [plan-execution-prompt.example.md](/Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/references/examples/plan-execution-prompt.example.md)
+- [review-fix-prompt.example.md](/Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/references/examples/review-fix-prompt.example.md)
+
+补充要求：
+
+- `Priority` 只能用 `high` / `medium` / `low`
+- `Scope` 必须尽量落到具体文件、目录、模块、接口
+- `Constraints` 必须写出禁止项
+- `Suggested Fix` 必须优先写推荐方案，避免给一堆无排序选项
+- `Validation` 必须写具体命令、测试点或验收现象
+
+## Prompt 生成要求
+
+### 对 `/ap:plan`
+
+生成 prompt 时必须：
+
+- 先读代码再拆任务，不能只按需求文本空想
+- 优先沿用现有架构、命名、依赖和测试模式
+- 把大需求拆成多个小 prompt，而不是一个大而模糊的 prompt
+- 每个 prompt 只对应一个主要结果
+- 标出任务之间的依赖和优先级
+
+### 对 `/ap:review`
+
+生成 prompt 时必须：
+
+- 先给 review 结论，再决定是否需要生成修复 prompt
+- 只有“可执行问题”才生成 prompt
+- 每个 prompt 只处理一个独立问题，避免混合多个问题
+- 明确这是 bug fix、风险修复，还是行为校正
+- 如果问题信息不足，prompt 要写明需要先确认什么
+
+## 初始化
+
+初始化：
+
+```text
+/ap:init
+```
+
+兼容旧参数：
 
 ```text
 /ap:init planner="Claude Code" executor="Mastra Code"
 ```
 
-## 使用流程
+这两个参数只作为兼容信息保留，不参与门禁。
 
-1. 在项目中初始化：
+## 说明
 
-```text
-/ap:init planner="Claude Code" executor="Mastra Code"
-```
-
-也可以使用可选脚本：
-
-```bash
-curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
-```
-
-2. 创建任务：
-
-```text
-review 当前代码
-/ap:review 当前模块
-/ap:task 把刚才讨论的方案保存成任务
-```
-
-3. 执行任务：
-
-```text
-处理 pending task
-/ap:execute next
-```
-
-4. 验收任务：
-
-```text
-验收 done task
-/ap:verify all
-```
-
-## 项目文件
-
-`/ap:init` 或可选脚本会创建：
-
-- `CLAUDE.local.md`：Claude Code 项目级个人入口
-- `.mastracode/AGENTS.md`：Mastra Code 项目级个人入口
-- `.agent-memory/agent-protocol.md`：项目级个人协议配置
-- `.agent-memory/tasks.json`：Planner / Executor 共享任务状态
-- `.git/info/exclude`：本地忽略上述个人配置和状态文件
-
-这些文件不会提交到团队仓库。
-
-## 角色
-
-Planner 负责：
-
-- 分析需求
-- 设计方案
-- review 代码
-- 追加 pending task 到 `.agent-memory/tasks.json`
-- 验收 done task 并改为 `verified`
-
-Executor 负责：
-
-- 读取 `.agent-memory/tasks.json`
-- 认领 `pending` task 并改为 `in_progress`
-- 按 `spec` 实现或修复
-- 完成后改为 `done`
-- 填写 `implementation_notes`
-
-## /ap: 命令
-
-所有协议命令都使用 `/ap:` 前缀。
-
-| 命令 | 角色 | 参数 | 可选值 / 格式 | 行为 |
-|---|---|---|---|---|
-| `/ap:init` | 通用 | `planner=<agent>`、`executor=<agent>` | 推荐值：`Claude Code`、`Mastra Code`；含空格时用引号 | 初始化或更新项目级个人配置 |
-| `/ap:review` | Planner | `[scope]` | 可省略；文件、目录、模块名或自然语言范围 | 审查代码并创建 `review` task，不直接改业务代码 |
-| `/ap:plan` | Planner | `[requirement]` | 需求描述、架构问题、设计目标 | 创建 `feature` 或 `design` task |
-| `/ap:task` | Planner | `[summary]` | 当前讨论结论或任务摘要 | 把讨论结果保存成 pending task |
-| `/ap:verify` | Planner | `[task-id\|all]` | `task-001` 或 `all`；省略时检查可验收的 done task | 验收 done task，通过则改为 `verified`，不通过则退回 `in_progress` |
-| `/ap:execute` | Executor | `[task-id\|next]` | `task-001` 或 `next`；省略等同于 `next` | 认领并执行 pending task |
-| `/ap:fix` | Executor | `[task-id]` | `task-001`；省略时选择匹配的 bug/review task | 修复指定 bug/review task |
-| `/ap:test` | Executor | `[task-id]` | `task-001`；省略时针对当前 in_progress task | 运行验证并记录结果 |
-| `/ap:done` | Executor | `[task-id]` | `task-001`；省略时针对当前 in_progress task | 标记任务 `done` 并填写实现说明 |
-| `/ap:tasks` | 通用 | `[status]` | `pending`、`in_progress`、`blocked`、`done`、`verified`、`cancelled`；省略显示全部 | 列出任务 |
-| `/ap:status` | 通用 | 无 | 无 | 汇总任务数量和下一步建议 |
-| `/ap:help` | 通用 | `[command]` | 任意 `/ap:` 命令名；省略显示全部帮助 | 显示命令帮助 |
-| `/ap:whoami` | 通用 | 无 | 无 | 显示当前项目配置的 Planner / Executor |
-
-除 `/ap:init` 和只读命令外，命令会检查项目角色绑定。比如项目配置是 `Planner: Claude Code`、`Executor: Mastra Code`，那么 Mastra Code 收到 `/ap:review` 时不能创建 review task，Claude Code 收到 `/ap:execute next` 时不能执行代码修改。
-
-如果要修改项目角色绑定，重新运行 `/ap:init planner=<agent> executor=<agent>`。
-
-## 任务字段
-
-`.agent-memory/tasks.json` 的任务字段和可选值：
-
-| 字段 | 必填 | 可选值 / 格式 | 维护者 |
-|---|---|---|---|
-| `id` | 是 | `task-001` 递增格式 | Planner 创建 |
-| `type` | 是 | `review`、`feature`、`design`、`bug` | Planner 创建 |
-| `created_by` | 是 | 固定为 `planner` | Planner 创建 |
-| `status` | 是 | `pending`、`in_progress`、`blocked`、`done`、`verified`、`cancelled` | Planner / Executor 按状态流转维护 |
-| `priority` | 否 | `high`、`medium`、`low`；默认按 `medium` 理解 | Planner 创建，Executor 用于排序 |
-| `title` | 是 | 简短标题 | Planner 创建 |
-| `context` | 是 | 背景和原因 | Planner 创建 |
-| `spec` | 是 | Executor 可执行的具体要求 | Planner 创建 |
-| `implementation_notes` | 否 | 实现、验证、阻塞或退回说明 | Executor 填写，Planner 验收失败时可追加反馈 |
-| `created_at` | 是 | ISO 时间字符串 | Planner 创建 |
-| `updated_at` | 是 | ISO 时间字符串 | 当前修改者更新 |
-
-状态流转：
-
-```text
-pending -> in_progress -> done -> verified
-             |            |
-             -> blocked   -> in_progress（验收未通过）
-
-pending|blocked|in_progress -> cancelled
-```
-
-Executor 选择任务时，先按 `priority` 的 `high`、`medium`、`low` 排序，同优先级按 `created_at` 升序处理。
-
-## Agent 入口文件
-
-Claude Code：
-
-```text
-CLAUDE.local.md
-```
-
-Mastra Code：
-
-```text
-.mastracode/AGENTS.md
-```
-
-注意：Mastra Code 的 lookup order 是项目根目录 `AGENTS.md` / `CLAUDE.md`，然后 `.claude/AGENTS.md` / `.claude/CLAUDE.md`，最后 `.mastracode/AGENTS.md` / `.mastracode/CLAUDE.md`。如果团队仓库根目录已有 `AGENTS.md` 或 `CLAUDE.md`，Mastra 会先读取团队文件，这是 Mastra Code 的官方行为。
-
-## 可选脚本
-
-`skills/agent-protocol/scripts/init.sh` 是 `/ap:init` 的 shell 版本，方便不用 agent 时初始化项目。
-
-运行：
-
-```bash
-skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
-skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor="Mastra Code"
-```
+- `tasks.json` 是协议内部状态唯一来源
+- `.agent-memory/artifacts/prompt/` 是给 agent 直接执行的核心输出
+- 如果 prompt 和内部 `task.spec` 冲突，以 `task.spec` 为准
+- 不支持 `/ap:` 子命令的 agent 也必须通过自然语言执行同样工作流
+- 协议公开接口默认只保留 `plan / review / execute / fix`，其余步骤由执行流程自动完成

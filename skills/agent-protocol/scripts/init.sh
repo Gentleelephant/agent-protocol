@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # 用法:
-#   初始化/更新当前项目级个人配置:
-#     skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
-#     skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor="Mastra Code"
-#   通过远端脚本运行:
-#     curl -sSL https://raw.githubusercontent.com/Gentleelephant/agent-protocol/main/skills/agent-protocol/scripts/init.sh | bash -s -- --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
+#   skills/agent-protocol/scripts/init.sh --project
+#   skills/agent-protocol/scripts/init.sh --project --planner-agent "Claude Code" --executor-agent "Mastra Code"
+#   skills/agent-protocol/scripts/init.sh --project planner="Claude Code" executor="Mastra Code"
+# 说明:
+#   planner/executor 参数仅用于兼容旧配置，不再参与命令门禁。
 
 PROJECT_MODE=0
 PLANNER_AGENT="Claude Code"
@@ -55,6 +55,11 @@ if [ "$PROJECT_MODE" -ne 1 ]; then
 fi
 
 mkdir -p .agent-memory
+mkdir -p \
+  .agent-memory/artifacts/review \
+  .agent-memory/artifacts/plan \
+  .agent-memory/artifacts/prompt \
+  .agent-memory/artifacts/done
 
 cat > ".agent-memory/agent-protocol.md" << EOF
 # Agent 协作协议（项目级个人配置）
@@ -63,62 +68,53 @@ cat > ".agent-memory/agent-protocol.md" << EOF
 
 协议来源：已安装的 \`agent-protocol\` skill。
 
-## 项目角色
+## 工作模式
 
-- Planner: $PLANNER_AGENT
-- Executor: $EXECUTOR_AGENT
+- 默认采用单 agent 工作流
+- 同一个 agent 可以 review、plan、task、fix、execute、test、done、verify
+- 支持 \`/ap:\` 子命令时可以直接使用子命令
+- 不支持 \`/ap:\` 子命令时，必须把自然语言请求解释成等价命令意图
+- 如保留 legacy 字段，仅用于兼容展示：
+  - Planner: $PLANNER_AGENT
+  - Executor: $EXECUTOR_AGENT
 
 ## 读取顺序
 
 1. 先读取已安装的 \`agent-protocol\` skill
 2. 再读取当前文件 \`.agent-memory/agent-protocol.md\`
 3. 当前项目任务状态读取 \`.agent-memory/tasks.json\`
+4. 详细结果工件读取 \`.agent-memory/artifacts/\`
+
+## 共享记忆结构
+
+- \`.agent-memory/tasks.json\`：任务索引和状态流转的唯一来源
+- \`.agent-memory/artifacts/\`：review、plan、prompt、done 等结果工件
+- 读取状态优先看 task，读取细节优先看 artifact
+- artifact 只补充证据和历史，不反向修改 task 语义
 
 ## /ap: 命令
 
-Planner-only：
+- \`/ap:review [scope]\`
+- \`/ap:plan [requirement]\`
+- \`/ap:execute [task-id|next]\`
+- \`/ap:fix [task-id]\`
+- \`/ap:init planner=<agent> executor=<agent>\`
 
-- \`/ap:review [scope]\`：审查代码并创建 review task，不直接改代码。
-- \`/ap:plan [requirement]\`：分析需求或架构方案，创建 feature/design task。
-- \`/ap:task [summary]\`：把当前讨论结果保存为 pending task。
-- \`/ap:verify [task-id|all]\`：验收 done task，通过则标记 verified。
+## 自然语言等价意图
 
-Executor-only：
-
-- \`/ap:execute [task-id|next]\`：认领并执行 pending task。
-- \`/ap:fix [task-id]\`：修复指定 bug/review task。
-- \`/ap:test [task-id]\`：运行验证并记录结果。
-- \`/ap:done [task-id]\`：标记任务 done 并填写实现说明。
-
-Any-role：
-
-- \`/ap:init planner=<agent> executor=<agent>\`：初始化或更新项目级个人配置。
-- \`/ap:tasks\`：列出任务状态。
-- \`/ap:status\`：汇总任务统计和下一步建议。
-- \`/ap:help\`：显示命令帮助。
-- \`/ap:whoami\`：显示当前项目配置中的 Planner / Executor。
-
-## /ap:init
-
-- \`/ap:init\` 是配置命令，任意角色都可以执行。
-- 语法：\`/ap:init planner=<agent> executor=<agent>\`
-- 它可以创建或更新 \`.agent-memory/agent-protocol.md\`、\`.agent-memory/tasks.json\`、\`CLAUDE.local.md\`、\`.mastracode/AGENTS.md\` 和 \`.git/info/exclude\`。
-- 它不实现业务代码，不完成 task，也不绕过角色门禁。
-- 如果未提供 planner/executor，优先沿用当前 \`.agent-memory/agent-protocol.md\` 中的项目角色；仍缺失时使用 Planner: Claude Code、Executor: mastracode。
-
-## 命令角色门禁
-
-- 除 \`/ap:init\` 外，执行任何会产生副作用的 \`/ap:\` 命令前，先读取“项目角色”。
-- Planner-only 命令只有当前 agent 与 \`Planner: $PLANNER_AGENT\` 匹配时才能执行。
-- Executor-only 命令只有当前 agent 与 \`Executor: $EXECUTOR_AGENT\` 匹配时才能执行。
-- 角色不匹配时，不要创建 task、不要改代码、不要改任务状态；说明当前项目配置中应该由哪个 agent 执行。
-- 如需修改项目角色绑定，重新运行：\`/ap:init planner=<agent> executor=<agent>\` 或 \`skills/agent-protocol/scripts/init.sh --project --planner-agent <agent> --executor-agent <agent>\`。
+- “根据这个需求结合项目代码整理开发计划” => \`plan\`
+- “review 这段代码并给出修复 prompt” => \`review\`
+- “执行刚才 plan 产出的 prompt” => \`execute\`
+- “执行刚才 review 产出的修复 prompt” => \`fix\`
+- 对不支持子命令的 agent，上述自然语言必须产出与 \`/ap:\` 相同的 task 和 artifact
 
 ## 项目规则
 
 - 不要修改项目根目录的 \`AGENTS.md\` 或 \`CLAUDE.md\` 来启用本协议
-- 不需要用户显式说“按 agent-protocol”或“作为 Planner/Executor”；根据 skill 中的默认触发规则自动选择角色
-- 具体工作流、任务状态、优先级、异常恢复规则以已安装的 \`agent-protocol\` skill 为准
+- 不需要用户显式说“按 agent-protocol”或“作为 Planner/Executor”
+- legacy \`planner\` / \`executor\` 字段不参与命令门禁
+- 支持子命令时，\`/ap:\` 命令默认会自动写入 \`.agent-memory/artifacts/\`
+- 不支持子命令时，等价自然语言请求也必须写入同样的 \`.agent-memory/artifacts/\`
 - \`.agent-memory/\` 是个人本地状态目录，应保持不提交
 EOF
 
@@ -126,20 +122,19 @@ entry_content="## Agent 协作协议（项目级个人配置）
 
 这是当前项目的个人私有配置入口，不需要提交到团队仓库。
 
-请先读取已安装的 \`agent-protocol\` skill，再读取 \`.agent-memory/agent-protocol.md\`，并按其中的角色规则执行。
+请先读取已安装的 \`agent-protocol\` skill，再读取 \`.agent-memory/agent-protocol.md\`。
 
 默认行为：
 
-- review / 审查 / 检查代码 / 找问题 => Planner，创建 pending task
-- 规划 / 设计 / 拆任务 / 需求分析 => Planner，创建 pending task
-- 处理 pending task / 实现 task / 修复 task => Executor，更新 task 状态
-- 验收 / verify done task => Planner，改为 verified
+- review / 审查 / 检查代码 / 找问题 => 创建 pending task 和修复 prompt
+- 规划 / 设计 / 拆任务 / 需求分析 => 创建 pending task 和执行 prompt
+- 处理 pending task / 实现 task / 修复 task => 更新 task 状态、执行验证并记录完成结果
 
-用户不需要显式说“按 agent-protocol”或“作为 Planner/Executor”。
+同一个 agent 可以执行完整流程。legacy \`planner\` / \`executor\` 字段仅用于兼容展示，不参与门禁。
 
-支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:task\`, \`/ap:verify\`, \`/ap:execute\`, \`/ap:fix\`, \`/ap:test\`, \`/ap:done\`, \`/ap:tasks\`, \`/ap:status\`, \`/ap:help\`, \`/ap:whoami\`。
+如果当前 agent 不支持 \`/ap:\` 子命令，就把上述意图当作自然语言工作流执行，并产出相同的 task 与 artifact。
 
-\`/ap:init\` 是配置命令，任意角色都可以执行。执行任何会创建 task、修改代码、修改 task 状态的命令前，必须读取 \`.agent-memory/agent-protocol.md\` 中的“项目角色”和“命令角色门禁”。角色不匹配时不要执行副作用操作。"
+支持命令：\`/ap:init\`, \`/ap:review\`, \`/ap:plan\`, \`/ap:execute\`, \`/ap:fix\`。"
 
 printf "%s\n" "$entry_content" > CLAUDE.local.md
 mkdir -p .mastracode
@@ -164,8 +159,11 @@ else
 fi
 
 echo "✓ 项目级个人配置已初始化/更新"
+echo "  - legacy Planner: $PLANNER_AGENT"
+echo "  - legacy Executor: $EXECUTOR_AGENT"
 echo "  - CLAUDE.local.md 已更新（Claude Code）"
 echo "  - .mastracode/AGENTS.md 已更新（Mastra Code）"
 echo "  - .agent-memory/agent-protocol.md 已更新"
 echo "  - $tasks_message"
+echo "  - .agent-memory/artifacts/ 目录已确保存在"
 echo "  - $exclude_message"

@@ -1,26 +1,31 @@
 # Agent Protocol Reference
 
-## 角色分工
+## 工作模式
 
-- **Planner**：负责分析、设计、review、创建 pending task、验收 done task。
-- **Executor**：负责认领 pending task、实现或修复、更新任务状态。
+默认采用单 agent 工作流：
+
+- 同一个 agent 可以 review、plan、fix、execute，并在执行中自动完成验证和完成记录
+- 不再依赖 Planner / Executor 角色门禁
+- 如果项目里还保留 `planner` / `executor` 字段，它们只作为兼容信息展示，不作为执行限制
 
 ## 共享记忆位置
 
-项目根目录下的 `.agent-memory/tasks.json`
-
-项目角色绑定位置：
+项目根目录下：
 
 ```text
+.agent-memory/tasks.json
+.agent-memory/artifacts/
 .agent-memory/agent-protocol.md
 ```
 
 ## 任务类型
 
-- `review`：代码审查，Planner 发现问题
-- `feature`：新功能，Planner 提出方案
-- `design`：架构设计，Planner 提出方案
-- `bug`：缺陷修复
+- `review`
+- `feature`
+- `design`
+- `bug`
+
+这些类型表示“待执行工作”。不要把 `review_result`、`plan_record`、`execution_prompt`、`completion_record` 之类结果类型塞进 `task.type`。
 
 ## 任务结构（JSON）
 
@@ -28,69 +33,129 @@
 {
   "id": "task-001",
   "type": "review|feature|design|bug",
-  "created_by": "planner",
-  "status": "pending|in_progress|blocked|done|verified|cancelled",
+  "created_by": "agent|planner",
+  "status": "pending|in_progress|blocked|done|cancelled",
   "priority": "high|medium|low",
   "title": "简短描述",
   "context": "背景和原因",
-  "spec": "具体方案或问题描述（Planner 填写）",
-  "implementation_notes": "实现备注（Executor 填写）",
+  "spec": "具体实现契约",
+  "implementation_notes": "实现备注摘要",
+  "artifact_refs": ["artifact-review-001"],
+  "last_reviewed_at": "",
+  "last_tested_at": "",
   "created_at": "",
   "updated_at": ""
 }
 ```
 
+新任务默认写 `created_by: "agent"`。旧任务若保留 `created_by: "planner"`，按兼容模式继续读取。
+
+## Artifact 结构
+
+`artifact` 是 `.agent-memory/artifacts/` 下的 Markdown 结果文件，用于保存完整 review、plan、prompt、done 记录。
+
+推荐目录：
+
+```text
+.agent-memory/artifacts/
+  review/
+  plan/
+  prompt/
+  done/
+```
+
+推荐命名：
+
+```text
+<timestamp>__<command>__<task-id-or-scope>.md
+```
+
+推荐 artifact 逻辑类型：
+
+- `review_result`
+- `plan_record`
+- `execution_prompt`
+- `completion_record`
+
+## Execution Prompt Artifact
+
+对于 `/ap:review`、`/ap:plan` 产生的每个可执行 task，还应生成一个可直接交给其他 agent 或当前 agent 自己执行的 prompt artifact，存放到：
+
+```text
+.agent-memory/artifacts/prompt/
+```
+
+这个 prompt 必须明确：
+
+- 要解决什么问题
+- 允许改哪些范围
+- 禁止改哪些内容
+- 推荐怎样修复或实现
+- 如何验证完成
+- 该使用哪个 `/ap:` 子命令继续执行
+
+推荐头部字段：
+
+```text
+artifact_id:
+artifact_type: execution_prompt
+command:
+related_task_ids:
+scope:
+created_at:
+created_by_role:
+agent:
+command_hint:
+target_role: implementing-agent
+summary:
+```
+
+推荐正文结构：
+
+```text
+## Goal
+## Scope
+## Problem
+## Constraints
+## Suggested Fix
+## Validation
+## Deliverable
+## Command Hint
+```
+
+约束：
+
+- `task.spec` 仍然是 task 的规范来源，prompt artifact 是给实现阶段直接使用的展开版说明。
+- prompt 不应与 `task.spec` 冲突；若冲突，以 `task.spec` 为准并回报不一致。
+- prompt 必须具体到文件、模块、行为和验证标准，不能只写笼统建议。
+
 ## 状态流转
 
 ```text
-pending → in_progress → done → verified
-             │            │
-             └→ blocked   └→ in_progress（验收未通过）
+pending → in_progress → done
+             │
+             └→ blocked
 
-pending|blocked|in_progress → cancelled（Planner 取消）
+pending|blocked|in_progress → cancelled
 ```
-
-（Planner 写入）  （Executor 认领） （Executor 完成） （Planner 验收）
 
 辅助状态：
 
-- `blocked`：Executor 暂时不能继续，需要用户输入、外部依赖、凭据或其他 task。
-- `cancelled`：Planner 判断任务不再需要。
-
-验证未通过时，Planner 将 `done` 退回 `in_progress`，并在 `implementation_notes` 中补充反馈。
-
-## 优先级
-
-任务可以包含可选字段：
-
-```json
-"priority": "high|medium|low"
-```
-
-Executor 默认先处理 `high`，再处理 `medium`，最后处理 `low`。同优先级按 `created_at` 升序处理。
+- `blocked`：当前实现无法继续，需要用户输入、外部依赖、凭据或其他 task。
+- `cancelled`：该任务不再需要。
 
 ## 规则
 
-- Planner 只写 pending 状态，不修改 Executor 的字段
-- Executor 只改 status / implementation_notes，不修改 spec
+- `tasks.json` 是任务索引和状态流转的唯一来源
+- `artifact` 保存完整结果，task 只保留摘要和引用
 - 追加任务，不覆盖整个文件
-- 验收通过后只有 Planner 可以把 done 改为 verified
 - 项目级个人配置不提交到团队仓库
 
 ## 异常恢复
 
 - `tasks.json` 缺失：创建 `{"tasks": []}`。
+- `artifacts/` 缺失：创建目录，不影响既有 task。
 - `tasks.json` 非法：停止副作用操作，说明需要修复的位置。
+- task 引用缺失的 artifact：提示引用失效，但不要中断只读查询。
 - task id 有间断：从最大编号继续递增。
-- 当前 agent 与项目角色绑定不一致：按项目绑定拒绝副作用命令，并提示应该使用哪个 agent。
-
-## 命令角色门禁
-
-除 `/ap:init` 外，执行任何会产生副作用的 `/ap:` 命令前，必须验证当前 agent 是否与项目配置的角色匹配：
-
-- Planner-only 命令（`review`、`plan`、`task`、`verify`）：仅 configured Planner 可执行。
-- Executor-only 命令（`execute`、`fix`、`test`、`done`）：仅 configured Executor 可执行。
-- 只读命令（`tasks`、`status`、`help`、`whoami`）：任意角色可执行。
-- 角色不匹配时：不创建 task、不修改代码、不改任务状态；告知用户当前角色和应使用的 agent。
-
-修改角色绑定：重新运行 `/ap:init planner=<agent> executor=<agent>`。
+- `.agent-memory/agent-protocol.md` 中若存在 legacy `planner` / `executor` 绑定，不要用它们拒绝执行。

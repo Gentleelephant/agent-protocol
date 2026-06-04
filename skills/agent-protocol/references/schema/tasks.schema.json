@@ -18,13 +18,13 @@
             "enum": ["review", "feature", "design", "bug"]
           },
           "status": {
-            "enum": ["pending", "in_progress", "blocked", "done", "verified", "cancelled"]
+            "enum": ["pending", "in_progress", "blocked", "done", "cancelled"]
           },
           "priority": {
             "enum": ["high", "medium", "low"]
           },
           "created_by": {
-            "enum": ["planner"]
+            "enum": ["agent", "planner"]
           },
           "title": {
             "type": "string"
@@ -36,6 +36,18 @@
             "type": "string"
           },
           "implementation_notes": {
+            "type": "string"
+          },
+          "artifact_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "last_reviewed_at": {
+            "type": "string"
+          },
+          "last_tested_at": {
             "type": "string"
           },
           "created_at": {
