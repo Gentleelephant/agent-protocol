@@ -22,6 +22,14 @@
 1. 需求实现链路：`plan -> execute`
 2. 代码修复链路：`review -> execute`
 
+## 缓存与检索策略
+
+协议要求把大模型缓存命中率作为核心约束：默认只读取当前命令需要的稳定入口文档、目标 task、目标 prompt 和必要源码，不批量展开历史 artifact。
+
+如果项目中存在 `graphify-out/`，在 `/ap:plan` 或宽范围 `/ap:review` 中应优先用 graphify 图谱查询定位相关模块、文件和概念，再按需读取源码或文档确认事实。graphify 只作为检索索引，不接管 `.agent-memory` 状态流转。
+
+对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt；`/ap:execute` 默认仍按已生成 prompt 执行，避免实现阶段发散。
+
 无子命令兼容规则：
 
 - 支持 `/ap:` 子命令的 agent，优先用子命令

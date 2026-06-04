@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.20
+version: v3.21
 description: "Use only for explicit agent-protocol workflows: /ap:init, /ap:plan, /ap:review, /ap:execute, /ap:fix, /ap:clean, installing /ap commands, creating persistent agent handoff tasks/prompts, or Chinese requests that explicitly ask for agent-protocol handoff such as 按 agent-protocol, 生成可执行任务, 生成交接 prompt, 执行已有 task. Do not use for ordinary code review, debugging, planning, implementation, or code explanation unless the user explicitly asks to create protocol tasks/artifacts or use /ap."
 ---
 
@@ -12,6 +12,9 @@ Use this skill only when the user explicitly wants the persistent `/ap:` task-an
 
 - Do not load `.agent-memory/tasks.json` or artifacts unless the current `/ap:` command needs them.
 - Do not read historical artifacts broadly. Read only the target task, its `prompt_artifact_id`, or directly referenced artifacts.
+- If `graphify-out/` exists and the command needs architecture, module, or cross-file orientation, use the `graphify` skill to `query`, `explain`, or `path` before broad grep or multi-file reads.
+- Treat Graphify as an orientation index only. Verify concrete behavior in source files, scripts, schemas, or protocol docs before writing tasks or fixes.
+- Optional planning or reasoning skills may advise `/ap:plan` and complex `/ap:review`, but they must not own `.agent-memory` state or write protocol artifacts directly.
 - Do not treat generic words like "review", "plan", "fix", or "debug" as protocol intent by themselves.
 - Prefer normal coding-agent behavior when the user asks for direct implementation or ordinary analysis without handoff artifacts.
 
@@ -46,8 +49,8 @@ Read only the file needed for the active command:
 
 - `/ap:init`: initialize or update project-local personal protocol files and command adapters. Read `references/workflows.md`; prefer `scripts/init.sh`.
 - Install commands: refresh command adapters only. Read `references/workflows.md`; prefer `scripts/install-commands.sh`.
-- `/ap:plan`: inspect the requirement and project context, create tasks, and write plan plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
-- `/ap:review`: inspect code, create actionable bug/design tasks, and write review plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
+- `/ap:plan`: inspect the requirement and project context, using Graphify first when available for cross-file orientation, then create tasks and write plan plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
+- `/ap:review`: inspect code, using Graphify first when available for broad scope review, then create actionable bug/design tasks and write review plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
 - `/ap:execute` or `/ap:fix`: pick the requested pending task, read only its prompt/source artifacts as needed, implement, verify, write completion artifact, and update state. Read `references/workflows.md`, `references/protocol.md`, and executor guidance.
 - `/ap:clean`: clean `.agent-memory` history or reset it. Read `references/workflows.md`.
 

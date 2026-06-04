@@ -73,20 +73,26 @@ Use for `/ap:plan` and `/ap:review`.
 
 1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
 2. Inspect enough project context to create concrete tasks.
-3. Load `.agent-memory/tasks.json`; create `{"tasks": []}` if missing.
-4. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
-5. Validate `tasks.json` with `references/schema/tasks.schema.json` when possible. Stop before side effects if invalid.
-6. Append new tasks only. Do not overwrite existing tasks.
-7. New tasks must include `id`, `type`, `created_by: "agent"`, `status: "pending"`, `priority`, `title`, `context`, `spec`, `artifact_refs`, `created_at`, and `updated_at`.
-8. Also fill `origin_command`, `origin_artifact_id`, `prompt_artifact_id`, `source_summary`, `acceptance`, and `depends_on` when known.
-9. Do not fill `implementation_notes` for new tasks unless preserving an existing value.
-10. Write the plan/review artifact and one execution prompt artifact per actionable task before reporting completion.
+   - If `graphify-out/` exists and the scope is cross-file, architectural, or unclear, use Graphify `query`, `explain`, or `path` first to identify likely files, modules, and concepts.
+   - Use `rg`, file reads, and commands only after Graphify narrows the search or when Graphify is missing, stale, ambiguous, or insufficient.
+   - Treat Graphify output as an index, not proof. Verify task facts against source files, scripts, schemas, or protocol docs.
+3. For complex `/ap:plan` or broad `/ap:review`, optional planning/reasoning skills may be used as advisors. Their output must be normalized back into this protocol's tasks and artifacts; they must not write `.agent-memory` state directly.
+4. Load `.agent-memory/tasks.json`; create `{"tasks": []}` if missing.
+5. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
+6. Validate `tasks.json` with `references/schema/tasks.schema.json` when possible. Stop before side effects if invalid.
+7. Append new tasks only. Do not overwrite existing tasks.
+8. New tasks must include `id`, `type`, `created_by: "agent"`, `status: "pending"`, `priority`, `title`, `context`, `spec`, `artifact_refs`, `created_at`, and `updated_at`.
+9. Also fill `origin_command`, `origin_artifact_id`, `prompt_artifact_id`, `source_summary`, `acceptance`, and `depends_on` when known.
+10. Do not fill `implementation_notes` for new tasks unless preserving an existing value.
+11. Write the plan/review artifact and one execution prompt artifact per actionable task before reporting completion.
 
 Task creation rules:
 
 - `/ap:plan`: prefer existing architecture, naming, dependency patterns, and test style. Split unrelated deliverables into separate tasks. Prioritize dependency order, risk, and user-facing impact.
 - `/ap:review`: create tasks only for concrete actionable findings. Use `type: "bug"` for new defect tasks; keep old `review` tasks readable for compatibility.
 - The prompt artifact must contain enough source context for another agent to execute without reconstructing the entire conversation.
+- If Graphify or an optional advisor contributed to the analysis, include only the necessary compressed summary in the plan/review artifact or prompt `Source Context`.
+- Do not require the execution agent to rerun Graphify or the advisor unless validation genuinely depends on updated cross-file context.
 
 ## Execution Prompt Contract
 
