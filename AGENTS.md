@@ -96,6 +96,7 @@ graphify 可以作为代码库理解和检索的可选索引层，用于减少�
 - 对适配器变更，应分别检查 Claude、Mastra Code、Reasonix 的命令路径和语义一致性。
 - 对脚本变更，应优先验证 `skills/agent-protocol/scripts/` 下的确定性脚本行为。
 - 每次修改 `skills/` 下的协议内容、命令适配器、脚本或 bootstrap skill 时，必须同步递增 `skills/agent-protocol/SKILL.md` 的 `version`，并在相关修改提交后创建同名 git tag（例如 `version: v3.23` 对应 tag `v3.23`）。
+- `skills/ap:init/SKILL.md` 和 `skills/ap:install/SKILL.md` 是主协议的 bootstrap 入口，也必须写入与 `skills/agent-protocol/SKILL.md` 完全一致的 `version`，避免入口 skill 与主协议版本不一致。
 - 项目级个人状态和本地运行产物不应作为团队共享规范提交，除非用户明确要求。
 
 ## 验证要求
