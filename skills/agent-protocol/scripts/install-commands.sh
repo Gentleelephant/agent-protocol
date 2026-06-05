@@ -67,6 +67,26 @@ else
   REASONIX_BASE="$HOME/.config/reasonix"
 fi
 
+sync_command_file() {
+  local src="$1"
+  local dest="$2"
+  local name
+  name="$(basename "$src")"
+
+  if [ ! -e "$dest" ]; then
+    cp "$src" "$dest"
+    echo "    - $name 已创建"
+    return
+  fi
+
+  if cmp -s "$src" "$dest"; then
+    echo "    - $name 已是最新，跳过写入"
+  else
+    cp "$src" "$dest"
+    echo "    - $name 已更新"
+  fi
+}
+
 install_claude() {
   local base="$1"
   local target_dir="$base/commands"
@@ -80,12 +100,7 @@ install_claude() {
   done
   for src in "$SKILL_ROOT"/adapters/claude/commands/ap:*.md; do
     local dest="$target_dir/$(basename "$src")"
-    if [ -e "$dest" ]; then
-      echo "    - $(basename "$src") 已存在，跳过"
-    else
-      cp "$src" "$dest"
-      echo "    - $(basename "$src") 已创建"
-    fi
+    sync_command_file "$src" "$dest"
   done
 }
 
@@ -102,12 +117,7 @@ install_mastracode() {
   done
   for src in "$SKILL_ROOT"/adapters/mastracode/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
-    if [ -e "$dest" ]; then
-      echo "    - $(basename "$src") 已存在，跳过"
-    else
-      cp "$src" "$dest"
-      echo "    - $(basename "$src") 已创建"
-    fi
+    sync_command_file "$src" "$dest"
   done
 }
 
@@ -124,12 +134,7 @@ install_reasonix() {
   done
   for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
-    if [ -e "$dest" ]; then
-      echo "    - $(basename "$src") 已存在，跳过"
-    else
-      cp "$src" "$dest"
-      echo "    - $(basename "$src") 已创建"
-    fi
+    sync_command_file "$src" "$dest"
   done
 }
 

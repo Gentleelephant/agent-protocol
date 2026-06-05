@@ -52,9 +52,9 @@ Use this when the user asks only to install or refresh command adapters.
 1. Detect selected platform: explicit `claude`, `mastracode`, or `reasonix`; default `all`.
 2. Detect scope: `user` or `global` means user-level install; default project-level install.
 3. Prefer `bash <skill-root>/scripts/install-commands.sh`, adding `--agent <name>` and `--scope user` when applicable.
-4. Existing command files should be skipped, not overwritten.
+4. Managed command files should be created when missing, updated in place when contents differ, and skipped only when already up to date.
 5. Remove obsolete installed fix command files when found.
-6. Report what was installed and where.
+6. Report what was created, updated, already current, removed, and where it was installed.
 
 Do not create tasks for install-only requests.
 
@@ -132,11 +132,14 @@ summary:
 Quality requirements:
 
 - `task.spec` is the canonical task contract. If prompt and spec conflict, execution must follow `task.spec` and report the mismatch.
+- `Goal` must describe a single primary outcome, not a bundle of loosely related changes.
+- `Source Context` should include compact evidence anchors such as file paths, symbols, tests, errors, dependencies, or observed behavior, not just a conclusion.
 - `Problem` must state current behavior, expected behavior, and why it matters.
 - `Scope` must identify allowed files/modules as specifically as possible.
 - `Constraints` must list explicit non-goals and forbidden changes.
 - `Suggested Fix` should recommend a concrete implementation path.
-- `Validation` must include tests, commands, checks, or observable acceptance criteria.
+- `Validation` must include tests, commands, checks, or observable acceptance criteria, plus the expected pass signal whenever practical.
+- `Deliverable` should specify what the implementing agent must report back besides code changes, such as validation results, implementation notes, or blocker details.
 
 ## Implementation Workflow
 
@@ -171,12 +174,21 @@ Before implementation, every executed unit of work must already have a task id, 
 
 `/ap:prune`:
 
+Prefer running:
+
+```bash
+bash <skill-root>/scripts/prune.sh
+```
+
+Required behavior:
+
 1. Read `.agent-memory/tasks.json`.
 2. Keep tasks with status `pending`, `in_progress`, or `blocked`.
 3. Remove tasks with status `done` or `cancelled`.
 4. Delete completion artifacts under `.agent-memory/artifacts/done/`.
 5. Delete review, plan, and prompt artifacts referenced only by removed terminal tasks.
 6. Preserve `.agent-memory/agent-protocol.md` and directory structure.
+7. Report how many tasks and artifacts were removed, plus any referenced artifact ids missing on disk.
 
 `/ap:reset`:
 

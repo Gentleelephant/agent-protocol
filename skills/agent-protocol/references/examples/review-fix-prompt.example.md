@@ -21,7 +21,12 @@ high
 
 ## Source Context
 
-The review identified unsynchronized mutation paths in `pkg/cache/store.go` and marked them high risk because concurrent write panics can crash the process. The issue was confirmed by inspecting map write paths and the lack of matching lock coverage in targeted methods.
+Confirmed facts:
+- The review found unsynchronized mutation paths in `pkg/cache/store.go`.
+- Shared map write and delete paths do not consistently hold the write lock for the full mutation window.
+
+Risk note:
+- This is high risk because `concurrent map writes` panics and race detector failures can crash or invalidate the process under parallel access.
 
 ## Task Contract Snapshot
 
@@ -60,15 +65,15 @@ The review identified unsynchronized mutation paths in `pkg/cache/store.go` and 
 
 ## Validation
 
-- Run the cache package tests.
-- Run the cache package tests with the race detector if available.
-- Confirm no race or concurrent map write failure remains in the targeted scenario.
+- Run the targeted cache tests, for example `go test ./pkg/cache -run TestStore`.
+- Run `go test -race ./pkg/cache` if the environment supports the race detector.
+- Confirm the targeted concurrent scenario no longer produces a race report or `concurrent map writes` failure.
 
 ## Deliverable
 
 - Minimal locking fix in `store.go`
 - Concurrency-focused regression tests in `store_test.go`
-- `implementation_notes` describing the original race and how the fix was validated
+- `implementation_notes` describing the original race, which paths were protected, and how the fix was validated
 
 ## Command Hint
 

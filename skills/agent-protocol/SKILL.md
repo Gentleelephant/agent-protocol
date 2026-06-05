@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.26
+version: v3.29
 description: "Use only for explicit agent-protocol workflows: /ap:init, /ap:install, /ap:plan, /ap:review, /ap:import, /ap:execute, /ap:prune, /ap:reset, installing /ap commands, creating persistent agent handoff tasks/prompts, or Chinese requests that explicitly ask for agent-protocol handoff such as 按 agent-protocol, 生成可执行任务, 生成交接 prompt, 导入执行 prompt, 执行已有 task. Do not use for ordinary code review, debugging, planning, implementation, or code explanation unless the user explicitly asks to create protocol tasks/artifacts or use /ap."
 ---
 
@@ -43,7 +43,7 @@ Read only the file needed for the active command:
 - `references/execution-prompt-template.md`: execution prompt shape.
 - `references/schema/tasks.schema.json`: validate or repair `.agent-memory/tasks.json`.
 - `references/examples/*.example.md`: use only when a concrete prompt example is needed.
-- `scripts/init.sh` and `scripts/install-commands.sh`: preferred deterministic implementation for init/install.
+- `scripts/init.sh`, `scripts/install-commands.sh`, and `scripts/prune.sh`: preferred deterministic implementation for init/install/prune.
 
 ## Command Routing
 
@@ -53,7 +53,7 @@ Read only the file needed for the active command:
 - `/ap:review`: inspect code, using Graphify first when available for broad scope review, then create actionable bug/design tasks and write review plus execution prompt artifacts. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
 - `/ap:import`: normalize external execution prompt, prompt artifact, plan artifact, or plan document into task and artifact state only; do not implement code. Read `references/workflows.md`, `references/protocol.md`, and planner guidance.
 - `/ap:execute`: pick and implement an existing pending task only. Do not accept direct prompt or plan input. Read `references/workflows.md`, `references/protocol.md`, and executor guidance.
-- `/ap:prune`: remove completed/cancelled history only. Read `references/workflows.md`.
+- `/ap:prune`: remove completed/cancelled history only. Read `references/workflows.md`; prefer `scripts/prune.sh`.
 - `/ap:reset`: reset local `.agent-memory` state only. Read `references/workflows.md`.
 
 ## Persistent State

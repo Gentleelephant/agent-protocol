@@ -21,7 +21,13 @@ high
 
 ## Source Context
 
-The plan decomposition concluded that JWT login is currently incomplete but can be finished inside the existing auth and HTTP layers without schema changes or a package redesign. This task is first in dependency order because downstream authenticated requests rely on a valid token issuance path.
+Confirmed facts:
+- `internal/http/login_handler.go` already owns the existing login API path and should remain the HTTP entrypoint.
+- `internal/auth/service.go` is the intended auth layer for credential validation and token issuance behavior.
+- No schema or package redesign is required for this task.
+
+Dependency note:
+- This task is first in dependency order because downstream authenticated requests rely on a valid token issuance path.
 
 ## Task Contract Snapshot
 
@@ -64,16 +70,16 @@ The project currently exposes login-related handler code but does not complete t
 
 ## Validation
 
-- Run the auth service tests.
-- Run the login handler tests.
-- Confirm the success path returns a token and failure paths return the expected error response.
-- If there is an existing API test command, run the smallest command that covers the login path.
+- Run `go test ./internal/auth`.
+- Run the smallest login-handler-focused test command available, for example `go test ./internal/http -run TestLogin`.
+- Confirm the success path returns a signed token and failure paths return the expected error response.
+- If the repository already has an integration command covering login, run the smallest one that exercises token issuance and record the result.
 
 ## Deliverable
 
 - Updated implementation in the allowed files
 - Tests covering success and error paths
-- `implementation_notes` summarizing what changed and how it was verified
+- `implementation_notes` summarizing what changed, which files were modified, and how the behavior was verified
 
 ## Command Hint
 

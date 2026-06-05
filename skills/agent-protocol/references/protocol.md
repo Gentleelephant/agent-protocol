@@ -149,8 +149,12 @@ summary:
 
 - `task.spec` 仍然是 task 的规范来源，prompt artifact 是给实现阶段直接使用的展开版说明。
 - prompt 不应与 `task.spec` 冲突；若冲突，以 `task.spec` 为准并回报不一致。
+- `Goal` 应只包含一个主要目标，不要把多个实现结果混成一个 prompt。
 - prompt 必须复制足够的 review 或 plan 摘要，不能要求执行 agent 仅靠会话上下文还原任务背景。
+- `Source Context` 应尽量附带压缩后的证据锚点，例如文件、符号、测试、报错或依赖关系；如果存在推断，应显式标出。
 - prompt 必须具体到文件、模块、行为和验证标准，不能只写笼统建议。
+- `Validation` 应优先写明确命令和预期通过信号；如果环境不稳定，至少写最小替代验证路径。
+- `Deliverable` 应说明执行完成后要回报哪些结果，例如改动摘要、验证结果和 blocker。
 - `/ap:plan` 和 `/ap:review` 无论通过子命令还是自然语言等价意图触发，都必须把对应 artifact 持久化写入 `.agent-memory/artifacts/`。
 
 ## 状态流转
@@ -179,6 +183,8 @@ pending|blocked|in_progress → cancelled
 - 如果 plan 文档包含多个可执行项，只能创建或列出 task，不应隐式连续执行多个任务
 - `/ap:execute` 只能接收已有 task id、`next`、`--all` 和可选 `--origin review|plan|import` 来源过滤，不能创建 task，不能接收直接 prompt 或 plan；协议不提供 `--one` 或 `--loop`
 - `/ap:execute --all` 是当前 agent 会话内的安全串行批处理：每轮重新读取 `tasks.json`，一次只认领一个 task，优先恢复匹配的 `in_progress` task，不并行，不启动外部 supervisor
+- `/ap:install` 应刷新协议管理的命令文件：缺失则创建，内容变化则覆盖更新，内容一致才跳过
+- `/ap:prune` 应优先复用确定性脚本 `skills/agent-protocol/scripts/prune.sh`，避免不同 agent 各自实现不同的清理口径
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 

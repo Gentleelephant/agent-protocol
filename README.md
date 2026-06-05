@@ -194,11 +194,13 @@
 
 输入：`--agent all|claude|mastracode|reasonix` 和 `--scope project|user`。
 行为：只安装或刷新命令适配器，不初始化 `.agent-memory`，不创建 task。
+刷新规则：对本协议管理的命令文件，如果目标文件不存在则创建；如果已存在且内容不同则覆盖更新；如果内容相同则跳过写入。
 
 ### `/ap:prune`
 
 输入：无。
 行为：保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact。
+实现：优先运行 `skills/agent-protocol/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
 
 ### `/ap:reset`
 
@@ -225,6 +227,8 @@
 
 ## Prompt 标准结构
 
+本协议继续使用稳定的 Markdown 标题结构作为持久化 artifact 格式，而不是切换到 XML 或自由文本。原因是 OpenAI 更强调清晰的 section 组织，Anthropic 虽然推荐在复杂 prompt 中使用 XML 分隔内容，但当前项目的 execution prompt 首要目标是跨 agent 可移植、可 diff、可局部编辑、可缓存命中，因此固定标题的 Markdown 更适合作为统一规范。
+
 每个执行 prompt 至少包含：
 
 - `Goal`
@@ -246,13 +250,19 @@
 
 补充要求：
 
+- `Goal` 必须只描述一个主要结果；必要时可以顺带点明执行者角色，但不能把多个结果塞进同一 prompt
 - `Priority` 只能用 `high` / `medium` / `low`
-- `Source Context` 必须复制 review 结论或计划依据的关键摘要
-- `Task Contract Snapshot` 必须重述 task 的 `spec`、`acceptance` 和依赖信息
-- `Scope` 必须尽量落到具体文件、目录、模块、接口
-- `Constraints` 必须写出禁止项
-- `Suggested Fix` 必须优先写推荐方案，避免给一堆无排序选项
-- `Validation` 必须写具体命令、测试点或验收现象
+- `Source Context` 必须复制 review 结论或计划依据的关键摘要，并尽量包含证据锚点，例如文件、符号、测试名、报错、依赖关系；如果存在推断，应和已确认事实区分开
+- `Task Contract Snapshot` 必须重述 task 的 `spec`、`acceptance` 和依赖信息；若 prompt 与 `task.spec` 有冲突，以 `task.spec` 为准
+- `Scope` 必须尽量落到具体文件、目录、模块、接口；最好显式区分允许修改、按现有模式可连带修改、禁止修改
+- `Problem` 必须同时写清当前行为、期望行为、证据和影响，不能只写“需要优化”或“逻辑有问题”
+- `Constraints` 必须同时写出必须遵守的条件和明确禁止项，避免只写抽象话术，例如“尽量少改”
+- `Suggested Fix` 必须优先写推荐方案，避免给一堆无排序选项；如果存在备选路径，要说明默认选择条件
+- `Validation` 必须写具体命令、测试点或验收现象；若命令可能不存在，应说明最小替代验证方式和预期通过信号
+- `Deliverable` 必须说明执行 agent 最终应交付什么，例如修改文件、测试结果摘要、`implementation_notes`、遗留风险或 blocker 说明
+- `Command Hint` 只保留推荐的下一条协议命令，不要在这里重复正文说明
+- prompt 必须自包含，执行 agent 不应被迫重新读取大段历史对话才能开工
+- 标题顺序应保持稳定，避免无意义改写造成缓存失效
 
 ## Task 分类规则
 
@@ -287,6 +297,24 @@
 - 明确这是 bug fix、风险修复，还是行为校正
 - 如果问题信息不足，prompt 要写明需要先确认什么
 - review 产出的新 task 应优先使用 `bug` 类型，而不是 `review`
+
+## Prompt 优点与常见模糊点
+
+当前协议已有的强项：
+
+- 固定标题结构稳定，适合缓存、diff 和 artifact 持久化
+- `Scope`、`Constraints`、`Validation`、`Deliverable` 已经比通用 prompt 模板更工程化
+- `Task Contract Snapshot` 能把 task 约束显式复制进执行 prompt，减少执行期漂移
+- `Command Hint` 让 handoff 路径明确，适合多 agent 串联
+
+生成 prompt 时要避免的模糊点：
+
+- 只写“优化”“修一下”“按现有模式处理”，但没有说当前错误、目标行为和影响
+- `Source Context` 只有结论，没有证据锚点，导致执行 agent 需要重新猜原因
+- `Scope` 写成“相关文件”或“必要模块”，没有明确允许改动边界
+- `Constraints` 只写“不要大改”之类的抽象要求，没有写清禁止变更什么
+- `Suggested Fix` 罗列多个方向但不指定默认推荐路径
+- `Validation` 只写“跑测试”或“自行验证”，没有最小命令和通过信号
 
 ## 初始化
 
