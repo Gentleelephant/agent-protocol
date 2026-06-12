@@ -14,7 +14,16 @@ AGENT="all"
 SCOPE="project"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT_FROM_MEMORY="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd || true)"
+
+if [ -d "$SCRIPT_DIR/../adapters" ]; then
+  SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+elif [ -n "$REPO_ROOT_FROM_MEMORY" ] && [ -d "$REPO_ROOT_FROM_MEMORY/skills/agent-protocol/adapters" ]; then
+  SKILL_ROOT="$REPO_ROOT_FROM_MEMORY/skills/agent-protocol"
+else
+  echo "error: cannot locate agent-protocol adapters relative to $SCRIPT_DIR" >&2
+  exit 1
+fi
 
 while [ "$#" -gt 0 ]; do
   case "$1" in

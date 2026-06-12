@@ -11,6 +11,7 @@
    - `.agent-memory/agent-protocol.md`
    - `.agent-memory/tasks.json`（仅缺失时创建 `{"tasks": []}`）
    - `.agent-memory/artifacts/` 及其 `review`、`plan`、`prompt`、`done` 子目录
+   - `.agent-memory/scripts/` 及其中的 `init.sh`、`install-commands.sh`、`prune.sh`
 3. 创建本地入口文件：
    - `CLAUDE.local.md`
    - `.mastracode/AGENTS.md`

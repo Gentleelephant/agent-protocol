@@ -24,12 +24,21 @@ Prefer running:
 bash <skill-root>/scripts/init.sh --project
 ```
 
+After init, the project should also contain local runtime script mirrors:
+
+```text
+.agent-memory/scripts/init.sh
+.agent-memory/scripts/install-commands.sh
+.agent-memory/scripts/prune.sh
+```
+
 Create missing project-local private files and skip existing files:
 
 ```text
 .agent-memory/agent-protocol.md
 .agent-memory/tasks.json
 .agent-memory/artifacts/
+.agent-memory/scripts/
 CLAUDE.local.md
 .mastracode/AGENTS.md
 ```
@@ -52,10 +61,12 @@ Use this when the user asks only to install or refresh command adapters.
 
 1. Detect selected platform: explicit `claude`, `cursor`, `mastracode`, `mimocode`, or `reasonix`; default `all`.
 2. Detect scope: `user` or `global` means user-level install; default project-level install.
-3. Prefer `bash <skill-root>/scripts/install-commands.sh`, adding `--agent <name>` and `--scope user` when applicable.
-4. Managed command files should be created when missing, updated in place when contents differ, and skipped only when already up to date.
-5. Remove obsolete installed fix command files when found.
-6. Report what was created, updated, already current, removed, and where it was installed.
+3. Prefer the project-local script mirror `.agent-memory/scripts/install-commands.sh` when it exists. This keeps deterministic protocol scripts project-local instead of relying on user-scope script locations.
+4. Otherwise resolve the repository root or installed skill root. Do not assume the current working directory is the repo root.
+5. Fallback to `bash <repo-root>/skills/agent-protocol/scripts/install-commands.sh` when working inside this repository, or `bash <skill-root>/scripts/install-commands.sh` when the installed skill root is already known. Add `--agent <name>` and `--scope user` when applicable.
+6. Managed command files should be created when missing, updated in place when contents differ, and skipped only when already up to date.
+7. Remove obsolete installed fix command files when found.
+8. Report what was created, updated, already current, removed, and where it was installed.
 
 Do not create tasks for install-only requests.
 
@@ -206,6 +217,12 @@ Before implementation, every executed unit of work must already have a task id, 
 `/ap:prune`:
 
 Prefer running:
+
+```bash
+bash .agent-memory/scripts/prune.sh
+```
+
+Fallback:
 
 ```bash
 bash <skill-root>/scripts/prune.sh

@@ -50,7 +50,7 @@
 初始化与安装命令：
 
 - `/ap:init`：初始化本地协议目录，不安装命令适配器
-- `/ap:install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器
+- `/ap:install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器；协议脚本优先使用项目下 `.agent-memory/scripts/`
 
 对 Claude Code，仓库现在额外提供了两个顶层 bootstrap skill：
 
@@ -351,7 +351,7 @@
 /ap:init
 ```
 
-执行后只初始化 `.agent-memory/` 本地状态。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
+执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
 
 Claude Code 入口规则：
 
@@ -359,6 +359,7 @@ Claude Code 入口规则：
 - `skills/ap:install/SKILL.md` 是安装 bootstrap 入口
 - 这两个入口只负责把 `/ap:init` 和 `/ap:install` 暴露给 Claude，并分别转发到主 `agent-protocol` skill 的 Init Workflow 和 Install Workflow
 - 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
+- 协议运行依赖脚本优先使用 `.agent-memory/scripts/`，不依赖 user scope 的脚本位置
 
 脚本参数：
 
@@ -369,6 +370,7 @@ Claude Code 入口规则：
 - 已存在的目录会跳过
 - 已存在的文件会跳过
 - 已存在的 `.agent-memory/tasks.json` 会保留
+- `.agent-memory/scripts/init.sh`、`install-commands.sh`、`prune.sh` 会创建或更新
 
 示例：
 
@@ -450,6 +452,8 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 - 已存在的命令文件若内容不同会覆盖更新，内容相同则跳过
 - 已安装的旧 fix 命令文件会被删除
 - 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
+- 如果由 agent 触发安装，不应直接执行 `./skills/agent-protocol/scripts/install-commands.sh`；必须先定位仓库根目录，再执行 `<repo-root>/skills/agent-protocol/scripts/install-commands.sh`
+- 如果 `.agent-memory/scripts/install-commands.sh` 已存在，应优先执行该项目本地脚本，而不是依赖 user scope 脚本位置
 
 ## 说明
 

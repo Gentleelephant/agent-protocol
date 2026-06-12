@@ -6,7 +6,13 @@ if [ "$#" -ne 0 ]; then
   exit 1
 fi
 
-ROOT_DIR="${PWD}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -d "$SCRIPT_DIR/../../.agent-memory" ]; then
+  ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+else
+  ROOT_DIR="${PWD}"
+fi
 MEMORY_DIR="$ROOT_DIR/.agent-memory"
 TASKS_PATH="$MEMORY_DIR/tasks.json"
 ARTIFACTS_DIR="$MEMORY_DIR/artifacts"

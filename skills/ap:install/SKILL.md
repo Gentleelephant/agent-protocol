@@ -1,6 +1,6 @@
 ---
 name: ap:install
-version: v3.32
+version: v3.34
 description: "Bootstrap agent-protocol command adapter installation for Claude Code. Installs or refreshes project/user /ap: subcommands only."
 argument-hint: "[--agent all|claude|cursor|mastracode|mimocode|reasonix] [--scope project|user]"
 ---
@@ -17,10 +17,11 @@ exist.
 
 1. Read the installed `agent-protocol` skill.
 2. Follow its Install Workflow.
-3. Prefer `skills/agent-protocol/scripts/install-commands.sh`.
-4. Treat this command as adapter-installation-only work.
-5. Do not initialize `.agent-memory`.
-6. Do not create protocol tasks or modify product code.
+3. Prefer `.agent-memory/scripts/install-commands.sh` when it exists so the project uses local protocol scripts instead of relying on user-scope script locations.
+4. Otherwise resolve the repository root first, then run `<repo-root>/skills/agent-protocol/scripts/install-commands.sh`. Do not assume the current working directory is the repo root.
+5. Treat this command as adapter-installation-only work.
+6. Do not initialize `.agent-memory`.
+7. Do not create protocol tasks or modify product code.
 
 ## Arguments
 

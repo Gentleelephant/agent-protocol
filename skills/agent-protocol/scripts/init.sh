@@ -45,6 +45,25 @@ write_file_if_missing() {
   fi
 }
 
+sync_file() {
+  local src="$1"
+  local dest="$2"
+  if [ ! -e "$dest" ]; then
+    cp "$src" "$dest"
+    echo "  - $dest 已创建"
+    return
+  fi
+
+  if cmp -s "$src" "$dest"; then
+    echo "  - $dest 已是最新，跳过写入"
+  else
+    cp "$src" "$dest"
+    echo "  - $dest 已更新"
+  fi
+}
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 # Agent 协作协议（项目级个人配置）
 
@@ -61,15 +80,17 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 ## 读取顺序
 
-1. 先读取已安装的 `agent-protocol` skill
-2. 再读取当前文件 `.agent-memory/agent-protocol.md`
-3. 当前项目任务状态读取 `.agent-memory/tasks.json`
-4. 详细结果工件读取 `.agent-memory/artifacts/`
+1. 先读取当前项目下的 `.agent-memory/scripts/` 本地协议脚本（如存在）
+2. 再读取已安装的 `agent-protocol` skill
+3. 再读取当前文件 `.agent-memory/agent-protocol.md`
+4. 当前项目任务状态读取 `.agent-memory/tasks.json`
+5. 详细结果工件读取 `.agent-memory/artifacts/`
 
 ## 共享记忆结构
 
 - `.agent-memory/tasks.json`：任务索引和状态流转的唯一来源
 - `.agent-memory/artifacts/`：review、plan、prompt、done 等结果工件
+- `.agent-memory/scripts/`：项目本地协议脚本镜像，优先于 user scope 调用
 - 读取状态优先看 task，读取细节优先看 artifact
 - artifact 只补充证据和历史，不反向修改 task 语义
 
@@ -113,6 +134,7 @@ ENTRY_CONTENT=$(cat <<'EOF'
 这是当前项目的个人私有配置入口，不需要提交到团队仓库。
 
 请先读取已安装的 `agent-protocol` skill，再读取 `.agent-memory/agent-protocol.md`。
+如果 `.agent-memory/scripts/` 存在，优先使用其中的项目本地脚本，而不是 user scope 脚本。
 
 默认行为：
 
@@ -137,7 +159,11 @@ ensure_dir ".agent-memory/artifacts/review"
 ensure_dir ".agent-memory/artifacts/plan"
 ensure_dir ".agent-memory/artifacts/prompt"
 ensure_dir ".agent-memory/artifacts/done"
+ensure_dir ".agent-memory/scripts"
 write_file_if_missing ".agent-memory/agent-protocol.md" "$AGENT_PROTOCOL_CONTENT"
+sync_file "$SCRIPT_DIR/init.sh" ".agent-memory/scripts/init.sh"
+sync_file "$SCRIPT_DIR/install-commands.sh" ".agent-memory/scripts/install-commands.sh"
+sync_file "$SCRIPT_DIR/prune.sh" ".agent-memory/scripts/prune.sh"
 
 if [ ! -f ".agent-memory/tasks.json" ]; then
   printf '{"tasks": []}\n' > .agent-memory/tasks.json
