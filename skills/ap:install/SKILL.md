@@ -1,6 +1,6 @@
 ---
 name: ap:install
-version: v3.36
+version: v3.37
 description: "Bootstrap agent-protocol command adapter installation for Claude Code. Installs or refreshes project/user /ap: subcommands only."
 argument-hint: "[--agent all|claude|cursor|mastracode|mimocode|reasonix] [--scope project|user]"
 ---

@@ -14,7 +14,7 @@ Cursor command equivalent of `/ap:run`.
 
 1. 读取 `.agent-memory/agent-protocol.md`（如存在）。
 2. 加载 `.agent-memory/tasks.json`。
-3. 确保 `.agent-memory/artifacts/run/`、`plan/`、`review/`、`prompt` 和 `done/` 存在。
+3. 确保 `.agent-memory/artifacts/run/`、`plan/`、`review/`、`prompt/` 和 `done/` 存在。
 4. 解析入口：
    - 如果传入自然语言 requirement，主 agent 先按 `/ap:plan` 语义一次性拆出本次 run 需要的 task。
    - 如果传入 `--all`，使用现有全部匹配 task。
@@ -23,5 +23,5 @@ Cursor command equivalent of `/ap:run`.
 5. 写入 `.agent-memory/artifacts/run/` 下的 run artifact，记录编排依据、任务顺序和恢复信息。
 6. 为每个 in-scope task 生成或确认 `execution_prompt` artifact。
 7. 按 `depends_on`、`priority` 和 `created_at` 串行处理 task，一次只派发一个 task 给子 agent。
-8. 子 agent 完成后，主 agent 必须 review 改动、验证结果和风险说明；不通过时退回重做或停止 run。
+8. 子 agent 完成后，主 agent 必须 review 改动、验证结果和风险说明；不通过时退回重做或停止 run，不得直接标记 `done`。
 9. 所有 task 全部通过后，由主 agent 统一 `commit` 与 `push`，并把结果写入 run artifact。

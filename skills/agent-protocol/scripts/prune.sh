@@ -25,6 +25,11 @@ if [ ! -f "$TASKS_PATH" ]; then
   echo "  - .agent-memory/tasks.json missing, created empty task index"
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "error: python3 is required but not installed" >&2
+  exit 1
+fi
+
 python3 - "$MEMORY_DIR" "$TASKS_PATH" "$AGENT_PROTOCOL_PATH" <<'PY'
 import json
 import os
