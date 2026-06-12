@@ -1,8 +1,8 @@
 artifact_id: artifact-prompt-<id>
 artifact_type: execution_prompt
-command: /ap:review|/ap:plan
+command: /ap:review|/ap:plan|/ap:run
 related_task_ids: [task-<id>]
-origin_artifact_id: artifact-review-<id>|artifact-plan-<id>
+origin_artifact_id: artifact-review-<id>|artifact-plan-<id>|artifact-run-<id>
 scope: <files-or-modules>
 created_at: <ISO-8601>
 created_by_role: agent
@@ -53,4 +53,4 @@ summary: <one-line summary>
 
 ## Command Hint
 
-<Repeat the recommended next command, usually `/ap:execute <task-id>`.>
+<Repeat the recommended next command, usually `/ap:execute <task-id>`. When the prompt was prepared during `/ap:run`, the execution step is still a single-task `/ap:execute` unit under the main agent's orchestration.>

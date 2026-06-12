@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-本仓库维护 `agent-protocol`：一套围绕 `/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:init`、`/ap:install`、`/ap:prune`、`/ap:reset` 的 agent 协议与适配器。
+本仓库维护 `agent-protocol`：一套围绕 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:init`、`/ap:install`、`/ap:prune`、`/ap:reset` 的 agent 协议与适配器。
 
 协议目标不是堆叠会话上下文，而是把计划、review、可执行 prompt 和完成记录持久化为清晰 artifact，使其他 agent 能够按明确契约继续执行。
 
@@ -39,7 +39,7 @@ graphify 可以作为代码库理解和检索的可选索引层，用于减少�
 
 应触发协议流程的情况：
 
-- 用户使用 `/ap:init`、`/ap:install`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset`。
+- 用户使用 `/ap:init`、`/ap:install`、`/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset`。
 - 用户要求安装 `/ap` 命令或适配器。
 - 用户要求生成可执行任务、交接 prompt、持久化计划、持久化 review 或 `.agent-memory` artifact。
 - 用户明确说“按 agent-protocol”、“生成可执行任务”、“生成交接 prompt”、“导入执行 prompt”、“执行已有 task”等。
@@ -57,6 +57,7 @@ graphify 可以作为代码库理解和检索的可选索引层，用于减少�
 ```text
 .agent-memory/tasks.json
 .agent-memory/artifacts/plan/
+.agent-memory/artifacts/run/
 .agent-memory/artifacts/review/
 .agent-memory/artifacts/prompt/
 .agent-memory/artifacts/done/

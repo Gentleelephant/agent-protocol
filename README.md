@@ -1,7 +1,8 @@
 # agent-protocol
 
-一个围绕单一职责命令组织的 agent 协议：
+一个围绕单一职责命令组织，并提供 team orchestration 高阶入口的 agent 协议：
 
+- `/ap:run`：主 agent 自动拆任务、生成子 agent 执行 prompt、编排开发、review 并最终 commit/push
 - `/ap:plan`：根据用户需求和项目代码，生成开发计划和可执行 prompt
 - `/ap:review`：review 代码，输出 review 结果和修复 prompt
 - `/ap:import`：只把外部 execution prompt、prompt artifact、plan artifact 或 plan 文档归一化为 task / artifact，不执行代码
@@ -13,6 +14,7 @@
 
 对于不支持子命令的 agent，例如 Codex，也必须支持。做法不是依赖 `/ap:` 语法，而是把这些命令视为自然语言意图：
 
+- “按 agent-protocol 自动完成这个需求并提交” = `/ap:run`
 - “按 agent-protocol 根据这个需求结合项目代码整理开发计划” = `/ap:plan`
 - “按 agent-protocol review 这段代码并给出修复 prompt” = `/ap:review`
 - “导入这个执行 prompt 并创建 task” = `/ap:import`
@@ -24,11 +26,12 @@
 
 ## 核心结构
 
-主线只有两条：
+主线分两层：
 
-1. 需求实现链路：`plan -> execute`
-2. 代码修复链路：`review -> execute`
-3. 外部交接链路：`import -> execute`
+1. 高阶自动编排链路：`run`
+2. 基础需求实现链路：`plan -> execute`
+3. 基础代码修复链路：`review -> execute`
+4. 基础外部交接链路：`import -> execute`
 
 ## 缓存与检索策略
 
@@ -36,7 +39,7 @@
 
 如果项目中存在 `graphify-out/`，在 `/ap:plan` 或宽范围 `/ap:review` 中应优先用 graphify 图谱查询定位相关模块、文件和概念，再按需读取源码或文档确认事实。graphify 只作为检索索引，不接管 `.agent-memory` 状态流转。
 
-对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review artifact、task 和 execution prompt。外部 prompt 或 plan 文档只能通过 `/ap:import` 归一化；`/ap:execute` 不负责导入或创建 task。
+对于复杂方案设计，可以使用 superpower 等外部 planning / reasoning skill 作为顾问，但最终输出必须归一化为当前协议的 plan/review/run artifact、task 和 execution prompt。外部 prompt 或 plan 文档只能通过 `/ap:import` 归一化；`/ap:execute` 不负责导入或创建 task，`/ap:run` 负责主 agent 编排。
 
 无子命令兼容规则：
 
@@ -65,18 +68,20 @@
 ```text
 .agent-memory/tasks.json
 .agent-memory/artifacts/plan/
+.agent-memory/artifacts/run/
 .agent-memory/artifacts/review/
 .agent-memory/artifacts/prompt/
 ```
 
 规则：
 
+- `/ap:run` 为一次自动编排生成 run artifact，并在需要时补齐或确认每个 task 的执行 prompt
 - `/ap:plan` 为每个开发任务生成一个执行 prompt
 - `/ap:review` 为每个问题生成一个修复 prompt
-- `/ap:plan` 和 `/ap:review` 生成的开发计划、review 结果和 prompt 必须持久化保存到 `.agent-memory/artifacts/`
+- `/ap:run`、`/ap:plan` 和 `/ap:review` 生成的编排记录、开发计划、review 结果和 prompt 必须持久化保存到 `.agent-memory/artifacts/`
 - 不支持 `/ap:` 子命令的 agent 走自然语言等价流程时，也必须保存到同样的位置
 - `/ap:import` 只导入外部 prompt / plan 并创建 task，不执行
-- `/ap:execute` 只读取已存在 task 的关联 prompt，并在执行后自动完成验证与完成记录
+- `/ap:execute` 只读取已存在 task 的关联 prompt，并在执行后自动完成验证与完成记录；它不是主 agent 的 team orchestration 入口
 - 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
 
 同时，task 本身也要带上最小但关键的来源索引，至少包括：
@@ -90,8 +95,9 @@
 
 命令边界是协议稳定性的硬约束：
 
-- 创建任务只能由 `/ap:plan`、`/ap:review`、`/ap:import` 完成
-- 执行业务代码修改只能由 `/ap:execute` 完成
+- 主 agent 自动拆任务、委派、review 和 `commit/push` 只能由 `/ap:run` 完成
+- 创建任务只能由 `/ap:plan`、`/ap:review`、`/ap:import` 完成，或由 `/ap:run` 在启动时按 `plan` 语义一次性创建
+- 执行业务代码修改只能由 `/ap:execute` 完成；`/ap:run` 只负责编排与验收，不替代底层执行语义
 - 初始化本地状态只能由 `/ap:init` 完成
 - 安装命令适配器只能由 `/ap:install` 或 `install-commands.sh` 完成
 - 清理历史只能由 `/ap:prune` 完成
@@ -99,6 +105,26 @@
 - 不存在 fix 兼容命令；review 修复任务也必须通过 `/ap:execute <task-id>` 执行
 
 ## 命令
+
+### `/ap:run`
+
+输入：自然语言需求、`--all`、`--tasks task-001,task-002`，可选 `--origin review|plan|import|run`。不接收直接粘贴的 execution prompt、prompt artifact、plan artifact 或 plan 文档。
+行为：作为 team orchestration 高阶入口，由主 agent 负责拆任务或读取既有 task、生成或确认 execution prompt、委派子 agent 开发、review 子 agent 结果，并在全部通过后统一 `commit` 与 `push`。
+
+自然语言等价触发：
+
+- “按 agent-protocol 自动完成这个需求并提交”
+- “按 agent-protocol 执行所有 task，主 agent review 后 push”
+- “按 agent-protocol 把刚才 review 产出的 task 全部跑完”
+
+`run` 产物必须包含：
+
+- 编排摘要
+- task 选择或拆分依据
+- 每个 task 的 prompt 准备情况
+- 子 agent 执行与主 agent review 结果
+- 最终提交和推送结果
+- 推荐恢复命令，例如 `/ap:execute <task-id>` 或 `/ap:run --all --origin review`
 
 ### `/ap:plan`
 
@@ -162,8 +188,8 @@
 
 ### `/ap:execute`
 
-输入：已有 task id、`next`、`--all`，可选 `--origin review|plan|import`。不提供 `--one` 或 `--loop`；执行单个任务使用 `task-id` 或 `next`，批量执行使用 `--all`。
-行为：只读取已存在 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不创建 task，不接收直接 prompt 或 plan，不扩散修改范围。
+输入：已有 task id、`next`、`--all`，可选 `--origin review|plan|import|run`。不提供 `--one` 或 `--loop`；执行单个任务使用 `task-id` 或 `next`，批量执行使用 `--all`。
+行为：只读取已存在 task、来源 artifact 和 prompt，并按约束实现需求或修复问题，不创建 task，不接收直接 prompt 或 plan，不扩散修改范围，不承担主 agent team orchestration 或自动 `commit/push`。
 
 自然语言等价触发：
 
@@ -176,6 +202,7 @@
 
 - 只能选择 `pending` 或按恢复规则允许继续的既有 task。
 - `task-id`、`next`、`--all` 是执行目标；`--origin` 只是来源过滤，不表示 task 类型。
+- `/ap:execute` 是底层执行入口；需要主 agent 自动拆任务、委派、review 和提交时应使用 `/ap:run`。
 - `--all` 是安全批处理，不是外部 supervisor，也不负责重启 agent。agent 会话中断时，下次再次运行 `/ap:execute --all` 继续按状态恢复。
 - `--all` 每轮只认领一个 task；每轮开始前必须重新读取 `.agent-memory/tasks.json`，优先处理已有 `in_progress` task，再选择下一个匹配的 `pending` task。
 - `--all` 串行执行，不并行执行；每个 task 必须独立读取 prompt、独立状态流转、独立写 completion artifact。
@@ -331,7 +358,7 @@ Claude Code 入口规则：
 - `skills/ap:init/SKILL.md` 是初始化 bootstrap 入口
 - `skills/ap:install/SKILL.md` 是安装 bootstrap 入口
 - 这两个入口只负责把 `/ap:init` 和 `/ap:install` 暴露给 Claude，并分别转发到主 `agent-protocol` skill 的 Init Workflow 和 Install Workflow
-- 其他 `/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
+- 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
 
 脚本参数：
 
@@ -402,6 +429,7 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 - `tasks.json` 是协议内部状态唯一来源
 - `.agent-memory/artifacts/prompt/` 是给 agent 直接执行的核心输出
+- `.agent-memory/artifacts/run/` 保存主 agent 的自动编排记录
 - 如果 prompt 和内部 `task.spec` 冲突，以 `task.spec` 为准
 - 不支持 `/ap:` 子命令的 agent 也必须通过明确自然语言意图执行同样工作流
-- 协议公开接口只保留 `plan / review / import / execute / init / install / prune / reset`
+- 协议公开接口收敛为 `run / plan / review / import / execute / init / install / prune / reset`

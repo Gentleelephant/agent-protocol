@@ -6,6 +6,7 @@
 - 按照 `spec`、来源 artifact 和关联的 `execution_prompt` artifact 实现或修复
 - 完成后将 status 改为 `done`，填写 `implementation_notes` 和 `updated_at`
 - 将执行摘要和验证结果写入 `.agent-memory/artifacts/done/`
+- 在 `/ap:run` 下，子 agent 仍然只负责单 task 实现；主 agent 负责编排、review 和最终提交
 
 ### 工作流
 
@@ -32,6 +33,7 @@
 ### 规则
 
 - 不根据 agent 身份做角色门禁。
+- `/ap:execute` 是底层单 task 执行入口；主 agent 自动拆任务、委派、review、`commit/push` 应由 `/ap:run` 承担。
 - 不修改任务契约字段，例如 `spec`、`context`、`title`、`created_by`。
 - 不要引入额外的公共子命令来完成验证或完成记录。
 - 执行阶段不能创建 task，不能归一化外部 prompt 或 plan，不能跳过 task id、prompt artifact、done artifact 和状态流转。

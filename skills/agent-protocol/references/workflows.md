@@ -4,10 +4,11 @@ This file contains command details that are intentionally kept out of `SKILL.md`
 
 ## Commands
 
+- `/ap:run [requirement|--all|--tasks task-001,task-002] [--origin review|plan|import|run]`: high-level orchestration entrypoint. It may create tasks from a requirement using plan semantics, or consume an existing task set. The main agent must prepare or confirm execution prompts, delegate implementation, review task results, and finish with commit/push when the full in-scope batch passes.
 - `/ap:review [scope]`: review code and create review-derived tasks. Write a review artifact under `.agent-memory/artifacts/review/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:plan [requirement]`: analyze requirements and create feature/design tasks. Write a plan artifact under `.agent-memory/artifacts/plan/` and one execution prompt artifact per actionable task under `.agent-memory/artifacts/prompt/`.
 - `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`: normalize external handoff input into task/artifact state only. It must not implement product code.
-- `/ap:execute [task-id|next|--all] [--origin review|plan|import]`: claim and implement existing pending tasks only. Omitted target means `next`. `--origin` filters task source, not task type. There is no `--one` or `--loop`; use `task-id` or `next` for one task, and `--all` for safe serial batch execution. It must not create tasks or accept direct prompt/plan input.
+- `/ap:execute [task-id|next|--all] [--origin review|plan|import|run]`: claim and implement existing pending tasks only. Omitted target means `next`. `--origin` filters task source, not task type. There is no `--one` or `--loop`; use `task-id` or `next` for one task, and `--all` for safe serial batch execution. It must not create tasks or accept direct prompt/plan input.
 - `/ap:init`: initialize local protocol state only.
 - `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`: install or refresh command adapters only.
 - `/ap:prune`: remove completed/cancelled history only.
@@ -58,9 +59,38 @@ Use this when the user asks only to install or refresh command adapters.
 
 Do not create tasks for install-only requests.
 
+## Run Workflow
+
+Use for `/ap:run`.
+
+1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
+2. Inspect enough project context to understand the requirement or the selected task set.
+3. Load `.agent-memory/tasks.json`; create `{"tasks": []}` if missing.
+4. Ensure `.agent-memory/artifacts/{run,review,plan,prompt,done}/` exists.
+5. Validate `tasks.json` with `references/schema/tasks.schema.json` when possible. Stop before side effects if invalid.
+6. Resolve the orchestration target:
+   - Natural language requirement: create the full task set once at the start using `/ap:plan` semantics, then continue within the same run.
+   - `--all`: use all matching existing pending tasks.
+   - `--tasks task-001,task-002`: use only the explicitly selected existing tasks.
+   - `--origin review|plan|import|run`: optional filter on `origin_command` when consuming existing tasks.
+7. Prepare a run artifact under `.agent-memory/artifacts/run/` that records the requirement or task selection, orchestration rationale, and expected execution order.
+8. For each in-scope task, ensure an execution prompt artifact exists and is current enough for another agent to implement without reconstructing the conversation.
+9. Process tasks serially by dependency order, priority, and `created_at`:
+   - Do not run tasks in parallel.
+   - Do not create new unrelated tasks mid-run.
+   - Skip or mark `blocked` tasks with unmet `depends_on`.
+10. Delegate one task at a time to an implementing agent using that task's execution prompt.
+11. After each task implementation, the main agent must review the result, verification output, and changed files before deciding whether the task is accepted.
+12. If a task fails review, record the reason in artifacts or task notes, then re-run that task or stop the run. Do not silently mark it `done`.
+13. If a task passes review, ensure the task reaches `done` through the normal execution lifecycle.
+14. If any task hits a blocker, validation failure, or required-context failure, write the blocker result and stop the run before later tasks begin.
+15. When every in-scope task is accepted, the main agent performs the final `commit` and `push`, and records the submission result in the run artifact.
+
+`/ap:run` is the recommended default entrypoint for automatic requirement delivery or for consuming a batch of review/import/plan tasks with a main-agent orchestration loop. It does not replace `/ap:execute`; it orchestrates repeated single-task execution units.
+
 ## Task Creation Workflow
 
-Use for `/ap:plan`, `/ap:review`, and `/ap:import`.
+Use for `/ap:plan`, `/ap:review`, and `/ap:import`. `/ap:run` may invoke this workflow once at startup when it begins from a natural-language requirement.
 
 1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
 2. Inspect enough project context to create concrete tasks.
@@ -69,11 +99,11 @@ Use for `/ap:plan`, `/ap:review`, and `/ap:import`.
    - Treat Graphify output as an index, not proof. Verify task facts against source files, scripts, schemas, or protocol docs.
 3. For complex `/ap:plan` or broad `/ap:review`, optional planning/reasoning skills may be used as advisors. Their output must be normalized back into this protocol's tasks and artifacts; they must not write `.agent-memory` state directly.
 4. Load `.agent-memory/tasks.json`; create `{"tasks": []}` if missing.
-5. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
+5. Ensure `.agent-memory/artifacts/{run,review,plan,prompt,done}/` exists.
 6. Validate `tasks.json` with `references/schema/tasks.schema.json` when possible. Stop before side effects if invalid.
 7. Append new tasks only. Do not overwrite existing tasks.
 8. New tasks must include `id`, `type`, `created_by: "agent"`, `status: "pending"`, `priority`, `title`, `context`, `spec`, `artifact_refs`, `created_at`, and `updated_at`.
-9. Also fill `origin_command`, `origin_artifact_id`, `prompt_artifact_id`, `source_summary`, `acceptance`, and `depends_on` when known.
+9. Also fill `origin_command`, `origin_artifact_id`, `prompt_artifact_id`, `source_summary`, `acceptance`, and `depends_on` when known. When tasks are created from `/ap:run`, set `origin_command: "run"` and point `origin_artifact_id` at the run artifact.
 10. Do not fill `implementation_notes` for new tasks unless preserving an existing value.
 11. Write the plan/review artifact and one execution prompt artifact per actionable task before reporting completion.
 
@@ -87,6 +117,7 @@ Task creation rules:
 - `/ap:plan`: prefer existing architecture, naming, dependency patterns, and test style. Split unrelated deliverables into separate tasks. Prioritize dependency order, risk, and user-facing impact. Choose `type: "feature"` when the primary deliverable is executable capability; choose `type: "design"` when the primary deliverable is protocol, architecture, contract, or documentation design.
 - `/ap:review`: create tasks only for concrete actionable findings. Use `type: "bug"` for new defect tasks; keep old `review` tasks readable for compatibility.
 - `/ap:import`: accept only external execution prompt, prompt artifact, plan artifact, or plan document input. Save the imported source under `.agent-memory/artifacts/prompt/` or `.agent-memory/artifacts/plan/`, create missing pending tasks, generate missing execution prompt artifacts, infer `type` as `bug`, `feature`, or `design` from the imported content, default unclear imports to `feature` with the inference noted in `source_summary`, set `origin_command: "import"`, report created task ids, and stop without implementing code.
+- `/ap:run`: if it starts from a natural-language requirement, it may create tasks exactly once at the start of the run, then must switch to orchestration and execution. Do not keep creating new tasks as a substitute for finishing accepted in-scope work.
 - If an imported plan contains multiple executable items, create or list tasks only. Do not execute any task implicitly.
 - The prompt artifact must contain enough source context for another agent to execute without reconstructing the entire conversation.
 - If Graphify or an optional advisor contributed to the analysis, include only the necessary compressed summary in the plan/review artifact or prompt `Source Context`.
@@ -143,15 +174,15 @@ Quality requirements:
 
 ## Implementation Workflow
 
-Use for `/ap:execute`.
+Use for `/ap:execute`. `/ap:run` reuses this workflow one task at a time after the main agent has selected and prepared the task.
 
 1. Read `.agent-memory/agent-protocol.md` only if present and relevant.
 2. Load `.agent-memory/tasks.json`; if missing, create `{"tasks": []}`, report no pending tasks, and stop.
-3. Ensure `.agent-memory/artifacts/{review,plan,prompt,done}/` exists.
+3. Ensure `.agent-memory/artifacts/{run,review,plan,prompt,done}/` exists.
 4. Validate `tasks.json` when possible. Stop before side effects if invalid.
 5. Select an existing execution target before claiming work:
    - Allowed execution targets are `task-id`, `next`, and `--all`.
-   - `--origin review|plan|import` is an optional filter on `origin_command`; it is not a task type selector.
+   - `--origin review|plan|import|run` is an optional filter on `origin_command`; it is not a task type selector.
    - Pick pending tasks relevant to the request. If several match, sort by `priority` then `created_at`.
    - If `task-id` is combined with `--origin`, verify the task's `origin_command` matches before claiming; stop on mismatch.
    - If `--all` is selected, execute matching tasks serially. Do not run tasks in parallel, do not start an external supervisor, and do not claim more than one task at a time.
@@ -168,7 +199,7 @@ For `--all`, treat the command as a safe serial batch inside the current agent s
 
 Do not modify task contract fields such as `spec`, `context`, `title`, or `created_by`.
 
-Before implementation, every executed unit of work must already have a task id, an execution prompt artifact, and normal lifecycle state. `/ap:execute` must not create tasks or import external handoff content.
+Before implementation, every executed unit of work must already have a task id, an execution prompt artifact, and normal lifecycle state. `/ap:execute` must not create tasks or import external handoff content. Under `/ap:run`, these single-task execution units remain the implementation primitive even though the main agent owns orchestration.
 
 ## Cleanup Workflow
 
@@ -186,7 +217,7 @@ Required behavior:
 2. Keep tasks with status `pending`, `in_progress`, or `blocked`.
 3. Remove tasks with status `done` or `cancelled`.
 4. Delete completion artifacts under `.agent-memory/artifacts/done/`.
-5. Delete review, plan, and prompt artifacts referenced only by removed terminal tasks.
+5. Delete run, review, plan, and prompt artifacts referenced only by removed terminal tasks.
 6. Preserve `.agent-memory/agent-protocol.md` and directory structure.
 7. Report how many tasks and artifacts were removed, plus any referenced artifact ids missing on disk.
 
@@ -194,7 +225,7 @@ Required behavior:
 
 1. Preserve `.agent-memory/agent-protocol.md`.
 2. Reset `.agent-memory/tasks.json` to `{"tasks": []}`.
-3. Empty `.agent-memory/artifacts/review/`, `plan/`, `prompt/`, and `done/`.
+3. Empty `.agent-memory/artifacts/run/`, `review/`, `plan/`, `prompt/`, and `done/`.
 4. Preserve artifact directories.
 
 ## Error Recovery
