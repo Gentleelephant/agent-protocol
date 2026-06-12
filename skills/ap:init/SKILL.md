@@ -1,6 +1,6 @@
 ---
 name: ap:init
-version: v3.31
+version: v3.32
 description: "Bootstrap agent-protocol project initialization for Claude Code. Creates local protocol state only."
 ---
 

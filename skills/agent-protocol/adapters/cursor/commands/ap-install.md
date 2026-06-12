@@ -1,8 +1,10 @@
-# /ap:install
+# /ap-install
+
+Cursor command equivalent of `/ap:install`.
 
 安装或刷新命令适配器。此命令只复制命令文件并清理已废弃的旧 fix 入口，不初始化 `.agent-memory`，不创建 task，不修改业务代码。
 
-用户在调用本命令时传入的文本作为安装参数处理。
+Cursor commands 以文件名暴露命令，因此本适配器使用 `/ap-install`、`/ap-run`、`/ap-plan` 等等价命令名，而不是带冒号的 `/ap:*`。
 
 ## 工作流
 

@@ -4,6 +4,7 @@ set -euo pipefail
 # 用法:
 #   skills/agent-protocol/scripts/install-commands.sh
 #   skills/agent-protocol/scripts/install-commands.sh --agent claude
+#   skills/agent-protocol/scripts/install-commands.sh --agent cursor --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent mastracode --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent mimocode --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent reasonix --scope user
@@ -41,10 +42,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$AGENT" in
-  claude|mastracode|mimocode|reasonix|all)
+  claude|cursor|mastracode|mimocode|reasonix|all)
     ;;
   *)
-    echo "error: --agent must be one of: claude, mastracode, mimocode, reasonix, all" >&2
+    echo "error: --agent must be one of: claude, cursor, mastracode, mimocode, reasonix, all" >&2
     exit 1
     ;;
 esac
@@ -60,11 +61,13 @@ esac
 
 if [ "$SCOPE" = "project" ]; then
   CLAUDE_BASE=".claude"
+  CURSOR_BASE=".cursor"
   MASTRA_BASE=".mastracode"
   MIMOCODE_BASE=".mimocode"
   REASONIX_BASE=".reasonix"
 else
   CLAUDE_BASE="$HOME/.claude"
+  CURSOR_BASE="$HOME/.cursor"
   MASTRA_BASE="$HOME/.mastracode"
   MIMOCODE_BASE="$HOME/.config/mimocode"
   REASONIX_BASE="$HOME/.config/reasonix"
@@ -102,6 +105,23 @@ install_claude() {
     fi
   done
   for src in "$SKILL_ROOT"/adapters/claude/commands/ap:*.md; do
+    local dest="$target_dir/$(basename "$src")"
+    sync_command_file "$src" "$dest"
+  done
+}
+
+install_cursor() {
+  local base="$1"
+  local target_dir="$base/commands"
+  mkdir -p "$target_dir"
+  echo "  - Cursor -> $target_dir"
+  for obsolete in "$target_dir/ap-fix.md" "$target_dir/ap-clean.md"; do
+    if [ -e "$obsolete" ]; then
+      rm -f "$obsolete"
+      echo "    - $(basename "$obsolete") 已删除（废弃命令）"
+    fi
+  done
+  for src in "$SKILL_ROOT"/adapters/cursor/commands/*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done
@@ -163,6 +183,10 @@ echo "  - scope: $SCOPE"
 
 if [ "$AGENT" = "claude" ] || [ "$AGENT" = "all" ]; then
   install_claude "$CLAUDE_BASE"
+fi
+
+if [ "$AGENT" = "cursor" ] || [ "$AGENT" = "all" ]; then
+  install_cursor "$CURSOR_BASE"
 fi
 
 if [ "$AGENT" = "mastracode" ] || [ "$AGENT" = "all" ]; then
