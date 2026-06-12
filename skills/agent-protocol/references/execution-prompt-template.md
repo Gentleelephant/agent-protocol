@@ -1,8 +1,8 @@
-artifact_id: artifact-prompt-<id>
+artifact_id: artifact-prompt-<YYYYMMDDTHHMMSSZ>-<scope-token>
 artifact_type: execution_prompt
 command: /ap:review|/ap:plan|/ap:run
 related_task_ids: [task-<id>]
-origin_artifact_id: artifact-review-<id>|artifact-plan-<id>|artifact-run-<id>
+origin_artifact_id: artifact-review-<YYYYMMDDTHHMMSSZ>-<scope-token>|artifact-plan-<YYYYMMDDTHHMMSSZ>-<scope-token>|artifact-run-<YYYYMMDDTHHMMSSZ>-<scope-token>
 scope: <files-or-modules>
 created_at: <ISO-8601>
 created_by_role: agent
@@ -10,6 +10,12 @@ agent: <agent-name>
 command_hint: /ap:execute <task-id>
 target_role: implementing-agent
 summary: <one-line summary>
+
+Naming contract:
+- `<YYYYMMDDTHHMMSSZ>` must be a UTC basic timestamp such as `20260613T010203Z`.
+- `<scope-token>` must be lowercase ASCII kebab-case.
+- For a single-task prompt, `<scope-token>` must be exactly `task-<id>`.
+- Do not use underscores, spaces, Chinese, or free-form title text in `artifact_id`.
 
 ## Goal
 

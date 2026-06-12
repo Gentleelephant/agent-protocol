@@ -1,8 +1,8 @@
-artifact_id: artifact-prompt-201
+artifact_id: artifact-prompt-20260604T100500Z-task-201
 artifact_type: execution_prompt
 command: /ap:review
 related_task_ids: [task-201]
-origin_artifact_id: artifact-review-201
+origin_artifact_id: artifact-review-20260604T100300Z-task-201
 scope: [pkg/cache/store.go, pkg/cache/store_test.go]
 created_at: 2026-06-04T10:05:00Z
 created_by_role: agent

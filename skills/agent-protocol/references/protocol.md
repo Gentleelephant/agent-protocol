@@ -83,11 +83,39 @@
   done/
 ```
 
-推荐命名：
+新写入 artifact 的强制命名：
 
 ```text
-<timestamp>__<command>__<task-id-or-scope>.md
+<timestamp>__<artifact-kind>__<scope-token>.md
 ```
+
+约束：
+
+- `timestamp` 必须使用 UTC 基本格式 `YYYYMMDDTHHMMSSZ`，例如 `20260613T010203Z`。
+- `artifact-kind` 只能使用目录同名值：`run`、`plan`、`review`、`prompt`、`done`。
+- `scope-token` 必须使用小写 ASCII kebab-case，只允许字母、数字和 `-`。
+- 单 task artifact 必须使用 `task-<number>`，例如 `task-12`。
+- 多 task batch artifact 必须使用 `tasks-<task-id>-<task-id>...`，例如 `tasks-task-12-task-13`。
+- 没有单一 task id 的需求或范围 artifact 必须使用 `scope-<kebab-slug>`，例如 `scope-login-flow`。
+- 文件名中只允许使用两处分段分隔符 `__`；除此之外禁止使用下划线、空格、中文、camelCase 或其他自定义分隔符。
+- `task.title` 只作为人类可读摘要，不得直接参与 artifact 文件名或 `artifact_id` 生成。
+
+新写入 artifact 的强制 `artifact_id`：
+
+```text
+artifact-<artifact-kind>-<timestamp>-<scope-token>
+```
+
+例如：
+
+- `artifact-run-20260613T010203Z-scope-login-flow`
+- `artifact-prompt-20260613T010305Z-task-12`
+- `artifact-done-20260613T010910Z-task-12`
+
+兼容规则：
+
+- 读取历史 artifact 时继续兼容旧命名和旧 `artifact_id`。
+- 只要发生新写入、重写或补写，必须改用上述强制规则，不能继续生成带下划线或自由格式的名字。
 
 推荐 artifact 逻辑类型：
 
@@ -151,6 +179,7 @@ summary:
 
 - `task.spec` 仍然是 task 的规范来源，prompt artifact 是给实现阶段直接使用的展开版说明。
 - prompt 不应与 `task.spec` 冲突；若冲突，以 `task.spec` 为准并回报不一致。
+- `artifact_id` 必须匹配 `artifact-prompt-<timestamp>-<scope-token>`；当 prompt 只对应一个 task 时，`scope-token` 必须直接使用该 `task-id`。
 - `Goal` 应只包含一个主要目标，不要把多个实现结果混成一个 prompt。
 - prompt 必须复制足够的 review 或 plan 摘要，不能要求执行 agent 仅靠会话上下文还原任务背景。
 - `Source Context` 应尽量附带压缩后的证据锚点，例如文件、符号、测试、报错或依赖关系；如果存在推断，应显式标出。

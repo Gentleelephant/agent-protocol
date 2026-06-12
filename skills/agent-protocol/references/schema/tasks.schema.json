@@ -39,10 +39,12 @@
             "type": "string"
           },
           "origin_artifact_id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^artifact-(review|plan|run|prompt|done)-[0-9]{8}T[0-9]{6}Z-[a-z0-9]+(?:-[a-z0-9]+)*$"
           },
           "prompt_artifact_id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^artifact-(review|plan|run|prompt|done)-[0-9]{8}T[0-9]{6}Z-[a-z0-9]+(?:-[a-z0-9]+)*$"
           },
           "source_summary": {
             "type": "string"
@@ -62,7 +64,8 @@
           "artifact_refs": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^artifact-(review|plan|run|prompt|done)-[0-9]{8}T[0-9]{6}Z-[a-z0-9]+(?:-[a-z0-9]+)*$"
             }
           },
           "last_reviewed_at": {

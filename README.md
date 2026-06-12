@@ -89,6 +89,12 @@
 - `/ap:import` 只导入外部 prompt / plan 并创建 task，不执行
 - `/ap:execute` 只读取已存在 task 的关联 prompt，并在执行后自动完成验证与完成记录；它不是主 agent 的 team orchestration 入口
 - 协议内部会用 `tasks.json` 保存状态；对使用者来说，真正需要关注的是 prompt 内容
+- 新写入 artifact 的文件名必须使用 `<timestamp>__<artifact-kind>__<scope-token>.md`
+- 其中 `timestamp` 必须是 UTC 基本格式 `YYYYMMDDTHHMMSSZ`，`artifact-kind` 只能是 `run|plan|review|prompt|done`
+- `scope-token` 必须是小写 ASCII kebab-case；单 task 必须直接使用 `task-<number>`，多 task batch 使用 `tasks-<task-id>-<task-id>...`，纯范围场景使用 `scope-<kebab-slug>`
+- 新写入 artifact 的 `artifact_id` 必须使用 `artifact-<artifact-kind>-<timestamp>-<scope-token>`
+- 禁止在 artifact 文件名或 `artifact_id` 中使用下划线、空格、中文、camelCase 或直接拼接 `task.title`
+- 历史 artifact 继续兼容读取；只要发生新写入、重写或补写，必须切换到上述统一命名
 
 同时，task 本身也要带上最小但关键的来源索引，至少包括：
 
@@ -131,6 +137,7 @@
 - 子 agent 执行与主 agent review 结果
 - 最终提交和推送结果
 - 推荐恢复命令，例如 `/ap:execute <task-id>` 或 `/ap:run --all --origin review`
+- 新写入 run artifact 的文件名和 `artifact_id` 必须遵守统一命名；对于自然语言需求，优先使用 `scope-<kebab-slug>`，不要把自由格式标题直接写进名字
 
 ### `/ap:plan`
 
@@ -152,6 +159,7 @@
 - 建议实现方式
 - 验收标准
 - 推荐执行命令，必须是 `/ap:execute <task-id>`
+- 新建 task 的 `title` 只作为人类可读摘要，不参与 `task.id`、artifact 文件名或 `artifact_id` 生成
 
 ### `/ap:review`
 
@@ -217,6 +225,7 @@
 - 如果用户传入直接 prompt、直接 plan 或 artifact 内容，必须停止并要求先使用 `/ap:import`。
 - 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
 - 真正开始实现前，被执行工作单元必须已有 task id、`prompt_artifact_id` 和正常状态流转记录。
+- 新写入 completion artifact 时，文件名和 `artifact_id` 也必须遵守统一命名。
 
 ### `/agent-protocol init`
 

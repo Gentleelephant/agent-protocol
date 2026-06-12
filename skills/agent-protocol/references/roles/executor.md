@@ -14,14 +14,14 @@
 2. 读取 `.agent-memory/tasks.json`；如果缺失，创建 `{"tasks": []}`，报告没有 pending task，并停止执行。
 3. 确保 `.agent-memory/artifacts/` 及对应子目录存在。
 4. 选择已有 pending task：
-   - 只接受 task id、`next`、`--all` 和可选 `--origin review|plan|import`。
+   - 只接受 task id、`next`、`--all` 和可选 `--origin review|plan|import|run`。
    - `--origin` 只过滤 `origin_command`，不是 task 类型过滤器。
    - 不接受 `--one` 或 `--loop`；执行一个 task 使用 task id 或 `next`。
    - `--all` 是当前会话内的安全串行批处理，不启动外部 supervisor，不并行执行。
    - 如果用户传入 prompt artifact、直接粘贴 execution prompt、plan artifact 或直接粘贴 plan 文档，停止执行并要求先使用 `/ap:import`。
 5. 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
 6. 如果存在 `prompt_artifact_id`，先读取它作为直接执行说明；否则再从 `artifact_refs` 中定位 `execution_prompt` artifact。若与 `task.spec` 冲突，以 `task.spec` 为准并回报冲突。
-7. 如果存在 `origin_artifact_id`，在需要补充背景时读取对应 review 或 plan artifact。
+7. 如果存在 `origin_artifact_id`，在需要补充背景时读取对应 review、plan、import 或 run artifact。
 8. 将认领任务改为 `in_progress`。
 9. 按 `spec` 和关联 prompt 实现，运行相关验证。
 10. 写 completion artifact，并在其中记录实现摘要和验证结果。
@@ -35,5 +35,6 @@
 - 不根据 agent 身份做角色门禁。
 - `/ap:execute` 是底层单 task 执行入口；主 agent 自动拆任务、委派、review、`commit/push` 应由 `/ap:run` 承担。
 - 不修改任务契约字段，例如 `spec`、`context`、`title`、`created_by`。
+- 新写入的 completion artifact 文件名和 `artifact_id` 也必须遵守共享命名契约，禁止生成带下划线或自由格式的名字。
 - 不要引入额外的公共子命令来完成验证或完成记录。
 - 执行阶段不能创建 task，不能归一化外部 prompt 或 plan，不能跳过 task id、prompt artifact、done artifact 和状态流转。

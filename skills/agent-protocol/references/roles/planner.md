@@ -22,9 +22,11 @@
    - `review`：仅兼容旧 task，新 task 不得使用。
 7. 为新 task 填写明确的 `context`、可执行的 `spec`，以及 `origin_command`、`origin_artifact_id`、`prompt_artifact_id`、`source_summary`、`acceptance`、`depends_on`。
 8. 对 `/ap:review`、`/ap:plan` 新建的每个可执行 task，再额外生成一个 `execution_prompt` artifact，保存到 `.agent-memory/artifacts/prompt/`。`/ap:run` 消费现有 task 或启动时创建 task 时，也必须补齐或确认对应 prompt。prompt 必须包含来源摘要和任务契约快照。
-9. 为 `/ap:review`、`/ap:plan`、`/ap:run` 生成对应 artifact，并把引用写入相关 task。
-10. 如需排序，填写 `priority`；默认使用 `medium`。
-11. 只追加 task，不重写历史任务。
+9. 新写入的 plan、review、run、prompt artifact 文件名和 `artifact_id` 必须遵守共享命名契约：文件名使用 `<timestamp>__<artifact-kind>__<scope-token>.md`，`artifact_id` 使用 `artifact-<artifact-kind>-<timestamp>-<scope-token>`；单 task 时 `scope-token` 必须直接使用 `task-<number>`。
+10. `task.title` 只作为人类可读摘要，不得直接拼进 artifact 文件名、`artifact_id` 或 task 机器标识。
+11. 为 `/ap:review`、`/ap:plan`、`/ap:run` 生成对应 artifact，并把引用写入相关 task。
+12. 如需排序，填写 `priority`；默认使用 `medium`。
+13. 只追加 task，不重写历史任务。
 
 ### 兼容规则
 

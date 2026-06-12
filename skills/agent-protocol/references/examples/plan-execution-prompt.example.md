@@ -1,8 +1,8 @@
-artifact_id: artifact-prompt-101
+artifact_id: artifact-prompt-20260604T100000Z-task-101
 artifact_type: execution_prompt
 command: /ap:plan
 related_task_ids: [task-101]
-origin_artifact_id: artifact-plan-101
+origin_artifact_id: artifact-plan-20260604T095500Z-task-101
 scope: [internal/auth/service.go, internal/auth/service_test.go, internal/http/login_handler.go]
 created_at: 2026-06-04T10:00:00Z
 created_by_role: agent
