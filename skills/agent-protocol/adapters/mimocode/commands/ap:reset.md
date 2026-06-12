@@ -10,5 +10,5 @@ description: Reset local agent-protocol state only. Any agent.
 
 1. 保留 `.agent-memory/agent-protocol.md`。
 2. 把 `.agent-memory/tasks.json` 重置为 `{"tasks": []}`。
-3. 清空 `.agent-memory/artifacts/review/`、`plan/`、`prompt/`、`done/`。
+3. 清空 `.agent-memory/artifacts/run/`、`review/`、`plan/`、`prompt/`、`done/`。
 4. 保留 artifact 目录结构。

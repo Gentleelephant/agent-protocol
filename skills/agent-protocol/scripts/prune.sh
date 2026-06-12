@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 0 ]; then
-  echo "error: prune.sh does not accept arguments" >&2
+MODE="history"
+
+if [ "$#" -gt 1 ]; then
+  echo "error: prune.sh accepts at most one argument: --hard" >&2
   exit 1
+fi
+
+if [ "$#" -eq 1 ]; then
+  case "$1" in
+    --hard)
+      MODE="hard"
+      ;;
+    *)
+      echo "error: unsupported argument: $1" >&2
+      echo "usage: prune.sh [--hard]" >&2
+      exit 1
+      ;;
+  esac
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +33,24 @@ TASKS_PATH="$MEMORY_DIR/tasks.json"
 ARTIFACTS_DIR="$MEMORY_DIR/artifacts"
 AGENT_PROTOCOL_PATH="$MEMORY_DIR/agent-protocol.md"
 
-mkdir -p "$ARTIFACTS_DIR/review" "$ARTIFACTS_DIR/plan" "$ARTIFACTS_DIR/prompt" "$ARTIFACTS_DIR/done"
+if [ "$MODE" = "hard" ]; then
+  if [ ! -e "$MEMORY_DIR" ]; then
+    echo "✓ .agent-memory not present, nothing to delete"
+    exit 0
+  fi
+
+  memory_name="$(basename "$MEMORY_DIR")"
+  if [ "$memory_name" != ".agent-memory" ] || [ "$MEMORY_DIR" = "/" ]; then
+    echo "error: refusing to delete unexpected path: $MEMORY_DIR" >&2
+    exit 1
+  fi
+
+  rm -rf "$MEMORY_DIR"
+  echo "✓ .agent-memory removed"
+  exit 0
+fi
+
+mkdir -p "$ARTIFACTS_DIR/run" "$ARTIFACTS_DIR/review" "$ARTIFACTS_DIR/plan" "$ARTIFACTS_DIR/prompt" "$ARTIFACTS_DIR/done"
 
 if [ ! -f "$TASKS_PATH" ]; then
   printf '{"tasks": []}\n' > "$TASKS_PATH"
@@ -97,7 +129,7 @@ for task in removed_tasks:
 prunable_refs = removed_refs - active_refs
 
 artifact_id_to_paths = {}
-for subdir in ("review", "plan", "prompt", "done"):
+for subdir in ("run", "review", "plan", "prompt", "done"):
     base = artifacts_dir / subdir
     if not base.exists():
         continue
@@ -139,7 +171,7 @@ for artifact_id in sorted(prunable_refs):
     all_matched_paths = artifact_id_to_paths.get(artifact_id, [])
     matched_paths = [
         path for path in all_matched_paths
-        if any(part in {"review", "plan", "prompt"} for part in path.relative_to(artifacts_dir).parts[:1])
+        if any(part in {"run", "review", "plan", "prompt"} for part in path.relative_to(artifacts_dir).parts[:1])
     ]
     if not matched_paths:
         if not all_matched_paths:
@@ -150,7 +182,7 @@ for artifact_id in sorted(prunable_refs):
             path.unlink()
             deleted_ref_files.append(path.relative_to(memory_dir).as_posix())
 
-for subdir in ("review", "plan", "prompt"):
+for subdir in ("run", "review", "plan", "prompt"):
     base = artifacts_dir / subdir
     if base.exists():
         for path in sorted(base.rglob("*"), reverse=True):
@@ -167,7 +199,7 @@ print("✓ agent-protocol history pruned")
 print(f"  - preserved tasks: {len(active_tasks)}")
 print(f"  - removed terminal tasks: {len(removed_tasks)}")
 print(f"  - deleted done artifacts: {len(deleted_done_files)}")
-print(f"  - deleted review/plan/prompt artifacts: {len(deleted_ref_files)}")
+print(f"  - deleted run/review/plan/prompt artifacts: {len(deleted_ref_files)}")
 if missing_ref_ids:
     print(f"  - referenced artifact ids not found on disk: {', '.join(sorted(missing_ref_ids))}")
 if agent_protocol_path.exists():

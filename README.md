@@ -271,8 +271,8 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 ### `/ap:prune`
 
-输入：无。
-行为：保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact。
+输入：无，或 `--hard`。
+行为：默认保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact；传入 `--hard` 时直接删除整个 `.agent-memory/` 目录。
 实现：优先运行 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到仓库里的 `skills/agent-protocol/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
 
 ### `/ap:reset`

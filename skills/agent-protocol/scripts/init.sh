@@ -171,6 +171,7 @@ echo "✓ 项目级个人配置初始化"
 
 ensure_dir ".agent-memory"
 ensure_dir ".agent-memory/artifacts"
+ensure_dir ".agent-memory/artifacts/run"
 ensure_dir ".agent-memory/artifacts/review"
 ensure_dir ".agent-memory/artifacts/plan"
 ensure_dir ".agent-memory/artifacts/prompt"
