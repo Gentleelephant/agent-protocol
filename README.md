@@ -115,7 +115,7 @@
 ### `/ap:run`
 
 输入：自然语言需求、`--all`、`--tasks task-001,task-002`，可选 `--origin review|plan|import|run`。不接收直接粘贴的 execution prompt、prompt artifact、plan artifact 或 plan 文档。
-行为：作为 team orchestration 高阶入口，由主 agent 负责拆任务或读取既有 task、生成或确认 execution prompt、委派子 agent 开发、review 子 agent 结果，并在全部通过后统一 `commit` 与 `push`。
+行为：作为 team orchestration 高阶入口，由主 agent 负责拆任务或读取既有 task、生成或确认 execution prompt、委派子 agent 开发、review 子 agent 结果，并在全部通过后统一 `commit` 与 `push`。如果最终没有形成主 agent 创建的 commit，则本次 `/ap:run` 不算成功完成。
 
 自然语言等价触发：
 

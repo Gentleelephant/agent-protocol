@@ -24,5 +24,6 @@
 6. 为每个 in-scope task 生成或确认 `execution_prompt` artifact。
 7. 按 `depends_on`、`priority` 和 `created_at` 串行处理 task，一次只派发一个 task 给子 agent。
 8. 子 agent 完成后，主 agent 必须 review 改动、验证结果和风险说明；不通过时退回重做或停止 run，不得直接标记 `done`。
-9. 所有 task 全部通过后，由主 agent 统一 `commit` 与 `push`，并把结果写入 run artifact。
-10. `/ap:run` 不并行执行 task，不让子 agent 直接提交 git 历史，也不在执行中无限扩散新增 task。
+9. 所有 task 全部通过后，主 agent 必须先执行最终 git 收尾：检查 `git status`，区分本次 run 目标改动与无关改动，只暂存应提交的文件，并创建一次主 agent commit。
+10. commit 成功后，主 agent 再执行 `push`（如果当前流程要求推送），并把 commit / push 结果写入 run artifact；如果未成功创建 commit，则 `/ap:run` 不能报告成功完成。
+11. `/ap:run` 不并行执行 task，不让子 agent 直接提交 git 历史，也不在执行中无限扩散新增 task。

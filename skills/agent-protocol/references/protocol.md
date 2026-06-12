@@ -188,6 +188,7 @@ pending|blocked|in_progress → cancelled
 - `/ap:execute` 只能接收已有 task id、`next`、`--all` 和可选 `--origin review|plan|import|run` 来源过滤，不能创建 task，不能接收直接 prompt 或 plan；协议不提供 `--one` 或 `--loop`
 - `/ap:execute --all` 是当前 agent 会话内的安全串行批处理：每轮重新读取 `tasks.json`，一次只认领一个 task，优先恢复匹配的 `in_progress` task，不并行，不启动外部 supervisor
 - `/ap:run` 是主 agent orchestration 入口：主 agent 负责拆任务或读取既有 task、准备 execution prompt、委派子 agent、review 子 agent 结果，并在全部通过后统一 `commit/push`
+- `/ap:run` 在主 agent 完成最终验证后，必须执行一次明确的 git 收尾：检查 `git status`、只暂存本次 run 应提交的改动、创建主 agent commit、记录 commit 结果，并在需要时再 push；如果没有成功创建 commit，则 run 只能报告为未完成或 blocked，不能当作成功结束
 - `/ap:run` 默认串行处理 task，不并行，不让子 agent 直接提交 git 历史
 - `/agent-protocol install` 应刷新协议管理的命令文件：缺失则创建，内容变化则覆盖更新，内容一致才跳过
 - `/ap:prune` 应优先复用项目本地确定性脚本 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到 `skills/agent-protocol/scripts/prune.sh`，避免不同 agent 各自实现不同的清理口径

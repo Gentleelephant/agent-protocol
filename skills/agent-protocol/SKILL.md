@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.46
+version: v3.47
 description: "Use only for explicit agent-protocol workflows. This is the single top-level command entrypoint and supports `/agent-protocol init` and `/agent-protocol install [--agent ...] [--scope ...]`. Installed /ap subcommands provide the actual command behavior."
 ---
 

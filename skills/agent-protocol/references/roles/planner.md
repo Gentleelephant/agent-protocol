@@ -31,6 +31,7 @@
 - 新任务统一写 `created_by: "agent"`。
 - `origin_command` 只表示来源命令；不要用它替代 `task.type`。`/ap:review` 产出的新 task 通常是 `type: "bug"` 且 `origin_command: "review"`。
 - `/ap:run` 是高阶编排入口，不是替代 task 类型或 execution prompt 的另一个自由格式。它要么读取既有 task，要么在 run 开头按 plan 语义一次性创建 task，再继续编排执行。
+- `/ap:run` 的成功结束条件包含主 agent 最终 git 收尾：汇总验证通过后，由主 agent 检查工作区、暂存本次 run 的目标改动、创建 commit，并把 commit 结果写回 run artifact；缺少 commit 只能视为未完成。
 - `/ap:import` 必须从输入内容推断 `bug`、`feature` 或 `design`；无法可靠判断时默认 `feature`，并在 `source_summary` 记录推断依据。
 - 不根据 agent 身份做角色门禁。
 - graphify 和外部顾问 skill 都不能直接接管 `.agent-memory` 状态流转。
