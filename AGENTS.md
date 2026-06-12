@@ -4,7 +4,7 @@
 
 ## 项目定位
 
-本仓库维护 `agent-protocol`：一套围绕 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:init`、`/ap:install`、`/ap:prune`、`/ap:reset` 的 agent 协议与适配器。
+本仓库维护 `agent-protocol`：一套围绕 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset` 以及顶层命令 `/agent-protocol init`、`/agent-protocol install` 的 agent 协议与适配器。
 
 协议目标不是堆叠会话上下文，而是把计划、review、可执行 prompt 和完成记录持久化为清晰 artifact，使其他 agent 能够按明确契约继续执行。
 
@@ -39,7 +39,7 @@ graphify 可以作为代码库理解和检索的可选索引层，用于减少�
 
 应触发协议流程的情况：
 
-- 用户使用 `/ap:init`、`/ap:install`、`/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset`。
+- 用户使用 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset`，或使用 `/agent-protocol init`、`/agent-protocol install`。
 - 用户要求安装 `/ap` 命令或适配器。
 - 用户要求生成可执行任务、交接 prompt、持久化计划、持久化 review 或 `.agent-memory` artifact。
 - 用户明确说“按 agent-protocol”、“生成可执行任务”、“生成交接 prompt”、“导入执行 prompt”、“执行已有 task”等。
@@ -97,7 +97,7 @@ graphify 可以作为代码库理解和检索的可选索引层，用于减少�
 - 对适配器变更，应分别检查 Claude、Mastra Code、Reasonix 的命令路径和语义一致性。
 - 对脚本变更，应优先验证 `skills/agent-protocol/scripts/` 下的确定性脚本行为。
 - 每次修改 `skills/` 下的协议内容、命令适配器、脚本或 bootstrap skill 时，必须同步递增 `skills/agent-protocol/SKILL.md` 的 `version`，并在相关修改提交后创建同名 git tag（例如 `version: v3.23` 对应 tag `v3.23`）。
-- `skills/ap:init/SKILL.md` 和 `skills/ap:install/SKILL.md` 是主协议的 bootstrap 入口，也必须写入与 `skills/agent-protocol/SKILL.md` 完全一致的 `version`，避免入口 skill 与主协议版本不一致。
+- `skills/agent-protocol/SKILL.md` 是唯一顶层 skill 入口。修改 `skills/` 下的协议内容后，必须同步递增它的 `version`，避免协议入口与实际结构不一致。
 - 项目级个人状态和本地运行产物不应作为团队共享规范提交，除非用户明确要求。
 
 ## 验证要求

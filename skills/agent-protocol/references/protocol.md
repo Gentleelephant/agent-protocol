@@ -189,7 +189,7 @@ pending|blocked|in_progress → cancelled
 - `/ap:execute --all` 是当前 agent 会话内的安全串行批处理：每轮重新读取 `tasks.json`，一次只认领一个 task，优先恢复匹配的 `in_progress` task，不并行，不启动外部 supervisor
 - `/ap:run` 是主 agent orchestration 入口：主 agent 负责拆任务或读取既有 task、准备 execution prompt、委派子 agent、review 子 agent 结果，并在全部通过后统一 `commit/push`
 - `/ap:run` 默认串行处理 task，不并行，不让子 agent 直接提交 git 历史
-- `/ap:install` 应刷新协议管理的命令文件：缺失则创建，内容变化则覆盖更新，内容一致才跳过
+- `/agent-protocol install` 应刷新协议管理的命令文件：缺失则创建，内容变化则覆盖更新，内容一致才跳过
 - `/ap:prune` 应优先复用项目本地确定性脚本 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到 `skills/agent-protocol/scripts/prune.sh`，避免不同 agent 各自实现不同的清理口径
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库

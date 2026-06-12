@@ -107,7 +107,7 @@ install_claude() {
   local target_dir="$base/commands"
   mkdir -p "$target_dir"
   echo "  - Claude Code -> $target_dir"
-  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md"; do
+  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md" "$target_dir/ap:init.md" "$target_dir/ap:install.md"; do
     if [ -e "$obsolete" ]; then
       rm -f "$obsolete"
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
@@ -124,7 +124,7 @@ install_cursor() {
   local target_dir="$base/commands"
   mkdir -p "$target_dir"
   echo "  - Cursor -> $target_dir"
-  for obsolete in "$target_dir/ap-fix.md" "$target_dir/ap-clean.md"; do
+  for obsolete in "$target_dir/ap-fix.md" "$target_dir/ap-clean.md" "$target_dir/ap-init.md" "$target_dir/ap-install.md"; do
     if [ -e "$obsolete" ]; then
       rm -f "$obsolete"
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
@@ -141,7 +141,7 @@ install_mastracode() {
   local target_dir="$base/commands/ap"
   mkdir -p "$target_dir"
   echo "  - Mastra Code -> $target_dir"
-  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md"; do
+  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md" "$target_dir/init.md" "$target_dir/install.md"; do
     if [ -e "$obsolete" ]; then
       rm -f "$obsolete"
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
@@ -158,7 +158,7 @@ install_mimocode() {
   local target_dir="$base/commands"
   mkdir -p "$target_dir"
   echo "  - MiMo Code -> $target_dir"
-  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md"; do
+  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md" "$target_dir/ap:init.md" "$target_dir/ap:install.md"; do
     if [ -e "$obsolete" ]; then
       rm -f "$obsolete"
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
@@ -175,7 +175,7 @@ install_reasonix() {
   local target_dir="$base/commands/ap"
   mkdir -p "$target_dir"
   echo "  - Reasonix -> $target_dir"
-  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md"; do
+  for obsolete in "$target_dir/fix.md" "$target_dir/clean.md" "$target_dir/init.md" "$target_dir/install.md"; do
     if [ -e "$obsolete" ]; then
       rm -f "$obsolete"
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"

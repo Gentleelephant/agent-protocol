@@ -108,16 +108,16 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - 读取状态优先看 task，读取细节优先看 artifact
 - artifact 只补充证据和历史，不反向修改 task 语义
 
-## /ap: 命令
+## 命令
 
 - `/ap:review [scope]`
 - `/ap:plan [requirement]`
 - `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`
 - `/ap:execute [task-id|next|--all] [--origin review|plan|import]`
-- `/ap:install [--agent all|claude|cursor|mastracode|mimocode|reasonix] [--scope project|user]`
+- `/agent-protocol install [--agent all|claude|cursor|mastracode|mimocode|reasonix] [--scope project|user]`
 - `/ap:prune`
 - `/ap:reset`
-- `/ap:init`
+- `/agent-protocol init`
 
 ## 自然语言等价意图
 
@@ -125,7 +125,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - “按 agent-protocol review 这段代码并给出修复 prompt” => `review`
 - “导入这个执行 prompt 并创建 task” => `import`
 - “执行已有 task-001” => `execute`
-- “安装 agent-protocol 命令适配器” => `install`
+- “安装 agent-protocol 命令适配器” => `/agent-protocol install`
 - “清理 .agent-memory 里的历史数据” => `prune`
 - “重置 .agent-memory 本地状态” => `reset`
 - 对不支持子命令的 agent，上述自然语言必须产出与 `/ap:` 相同的 task，并持久化保存到相同的 artifact 目录
@@ -156,12 +156,14 @@ ENTRY_CONTENT=$(cat <<'EOF'
 - 明确 `/ap:plan` 或“按 agent-protocol 规划” => 创建 pending task、开发计划 artifact 和执行 prompt
 - 明确 `/ap:import` 或“导入执行 prompt” => 只创建 task 和 artifact，不执行
 - 明确 `/ap:execute` 或“执行已有 task” => 更新 task 状态、执行验证并记录完成结果
+- 明确 `/agent-protocol init` => 初始化本地协议状态
+- 明确 `/agent-protocol install` => 安装或刷新命令适配器
 
 不要求显式区分角色。任何 agent 都可以读取并推进 task 与 artifact。
 
 如果当前 agent 不支持 `/ap:` 子命令，就把上述意图当作自然语言工作流执行，并产出相同且持久化保存的 task 与 artifact。
 
-支持命令：`/ap:init`, `/ap:install`, `/ap:review`, `/ap:plan`, `/ap:import`, `/ap:execute`, `/ap:prune`, `/ap:reset`。
+支持命令：`/agent-protocol init`, `/agent-protocol install`, `/ap:review`, `/ap:plan`, `/ap:import`, `/ap:execute`, `/ap:prune`, `/ap:reset`。
 EOF
 )
 

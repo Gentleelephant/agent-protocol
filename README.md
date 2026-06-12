@@ -7,8 +7,8 @@
 - `/ap:review`：review 代码，输出 review 结果和修复 prompt
 - `/ap:import`：只把外部 execution prompt、prompt artifact、plan artifact 或 plan 文档归一化为 task / artifact，不执行代码
 - `/ap:execute`：只执行已存在的 pending task，不创建 task，不接收直接 prompt 或 plan
-- `/ap:init`：只初始化 `.agent-memory` 本地协议状态
-- `/ap:install`：只安装或刷新项目级 / 用户级命令适配器
+- `/agent-protocol init`：只初始化 `.agent-memory` 本地协议状态
+- `/agent-protocol install`：只安装或刷新项目级 / 用户级命令适配器
 - `/ap:prune`：只清理已完成或已取消的历史 task 和对应历史 artifact
 - `/ap:reset`：只重置本地 `.agent-memory` 状态
 
@@ -20,7 +20,8 @@
 - “导入这个执行 prompt 并创建 task” = `/ap:import`
 - “执行刚才 plan 产出的 task” = `/ap:execute`
 - “执行刚才 review 产出的修复 task” = `/ap:execute`
-- “安装 agent-protocol 命令适配器” = `/ap:install`
+- “按 agent-protocol 初始化本地协议状态” = `/agent-protocol init`
+- “安装 agent-protocol 命令适配器” = `/agent-protocol install`
 - “清理 .agent-memory 历史记录” = `/ap:prune`
 - “重置 .agent-memory 本地状态” = `/ap:reset`
 
@@ -47,17 +48,22 @@
 - 不支持 `/ap:` 子命令的 agent，必须通过明确的 agent-protocol 自然语言意图完成同样效果
 - 无论走哪种入口，输出物和 prompt 质量要求必须一致
 
-初始化与安装命令：
+初始化与安装入口：
 
-- `/ap:init`：初始化本地协议目录，不安装命令适配器
-- `/ap:install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器；协议脚本优先使用项目下 `.agent-memory/scripts/`
+- `/agent-protocol init`：初始化本地协议目录，不安装命令适配器
+- `/agent-protocol install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器；协议脚本优先使用项目下 `.agent-memory/scripts/`
 
-对 Claude Code，仓库现在额外提供了两个顶层 bootstrap skill：
+执行方式说明：
 
-- `skills/ap:init/SKILL.md`
-- `skills/ap:install/SKILL.md`
+- 顶层命令：直接使用 `/agent-protocol init` 或 `/agent-protocol install [--agent ...] [--scope ...]`
+- 脚本阶段：需要确定性执行时，直接运行仓库里的 `scripts/init.sh` 或 `scripts/install-commands.sh`
+- 安装完成后：其余功能通过已安装的 `/ap:*` 子命令提供；`init/install` 本身不作为安装后的 `/ap:` 子命令公开
 
-它们的作用只有一个：让 Claude 在安装 skill 后立刻能发现 `/ap:init` 和 `/ap:install`。`/ap:init` 调用主 `agent-protocol` skill 完成本地状态初始化；`/ap:install` 调用主 `agent-protocol` skill 安装命令适配器。
+仓库现在只保留一个顶层 skill：
+
+- `skills/agent-protocol/SKILL.md`
+
+它既是顶层命令入口，也是协议总规范与路由入口。初始化与安装通过 `/agent-protocol init` 和 `/agent-protocol install ...` 提供；其余 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset` 继续由安装后的命令适配器提供，命令级语义以 `skills/agent-protocol/adapters/*/commands/*` 为准。
 
 ## 输出物
 
@@ -98,8 +104,8 @@
 - 主 agent 自动拆任务、委派、review 和 `commit/push` 只能由 `/ap:run` 完成
 - 创建任务只能由 `/ap:plan`、`/ap:review`、`/ap:import` 完成，或由 `/ap:run` 在启动时按 `plan` 语义一次性创建
 - 执行业务代码修改只能由 `/ap:execute` 完成；`/ap:run` 只负责编排与验收，不替代底层执行语义
-- 初始化本地状态只能由 `/ap:init` 完成
-- 安装命令适配器只能由 `/ap:install` 或 `install-commands.sh` 完成
+- 初始化本地状态只能由 `/agent-protocol init` 完成
+- 安装命令适配器只能由 `/agent-protocol install` 或 `install-commands.sh` 完成
 - 清理历史只能由 `/ap:prune` 完成
 - 重置状态只能由 `/ap:reset` 完成
 - 不存在 fix 兼容命令；review 修复任务也必须通过 `/ap:execute <task-id>` 执行
@@ -212,16 +218,47 @@
 - 如果多个 task 匹配，按 `priority` high、medium、low 排序，同优先级按 `created_at` 升序。
 - 真正开始实现前，被执行工作单元必须已有 task id、`prompt_artifact_id` 和正常状态流转记录。
 
-### `/ap:init`
+### `/agent-protocol init`
 
 输入：无。
 行为：只初始化 `.agent-memory/`、`tasks.json` 和 artifact 目录，不安装命令适配器，不创建业务 task。
 
-### `/ap:install`
+触发方式：
+
+- 顶层命令：`/agent-protocol init`
+- 自然语言：例如“按 agent-protocol 初始化本地协议状态”
+- 确定性脚本：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project
+```
+
+参数兼容：
+
+- 顶层命令本身不要求业务参数
+- 底层脚本参数保持不变，继续使用 `--project`
+
+### `/agent-protocol install`
 
 输入：`--agent all|claude|cursor|mastracode|mimocode|reasonix` 和 `--scope project|user`。
 行为：只安装或刷新命令适配器，不初始化 `.agent-memory`，不创建 task。
 刷新规则：对本协议管理的命令文件，如果目标文件不存在则创建；如果已存在且内容不同则覆盖更新；如果内容相同则跳过写入。
+
+触发方式：
+
+- 顶层命令：`/agent-protocol install [--agent ...] [--scope ...]`
+- 自然语言：例如“按 agent-protocol 安装命令适配器”或“安装 agent-protocol 命令适配器”
+- 确定性脚本：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
+```
+
+参数兼容：
+
+- `--agent all|claude|cursor|mastracode|mimocode|reasonix`
+- `--scope project|user`
+- 与之前的安装脚本参数保持一致
 
 ### `/ap:prune`
 
@@ -348,17 +385,16 @@
 初始化：
 
 ```text
-/ap:init
+/agent-protocol init
 ```
 
-执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`、命令适配器模板镜像到 `.agent-memory/adapters/`。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
+执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`、命令适配器模板镜像到 `.agent-memory/adapters/`。命令适配器安装必须单独执行 `/agent-protocol install` 或安装脚本。
 
 Claude Code 入口规则：
 
-- `skills/ap:init/SKILL.md` 是初始化 bootstrap 入口
-- `skills/ap:install/SKILL.md` 是安装 bootstrap 入口
-- 这两个入口只负责把 `/ap:init` 和 `/ap:install` 暴露给 Claude，并分别转发到主 `agent-protocol` skill 的 Init Workflow 和 Install Workflow
-- 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
+- `skills/agent-protocol/SKILL.md` 是唯一顶层 skill 入口
+- 它直接承载 `/agent-protocol init` 和 `/agent-protocol install ...` 的顶层命令说明
+- 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
 - 协议运行依赖脚本优先使用 `.agent-memory/scripts/`，不依赖 user scope 的脚本位置
 - install 所需的命令模板优先使用 `.agent-memory/adapters/`，避免在其他项目里找不到 `skills/agent-protocol/adapters/`
 
@@ -464,4 +500,4 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 - `.agent-memory/artifacts/run/` 保存主 agent 的自动编排记录
 - 如果 prompt 和内部 `task.spec` 冲突，以 `task.spec` 为准
 - 不支持 `/ap:` 子命令的 agent 也必须通过明确自然语言意图执行同样工作流
-- 协议公开接口收敛为 `run / plan / review / import / execute / init / install / prune / reset`
+- 协议公开接口收敛为 `run / plan / review / import / execute / prune / reset`，顶层命令 `/agent-protocol init` 与 `/agent-protocol install` 负责 bootstrap
