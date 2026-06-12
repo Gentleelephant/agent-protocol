@@ -5,6 +5,7 @@ set -euo pipefail
 #   skills/agent-protocol/scripts/install-commands.sh
 #   skills/agent-protocol/scripts/install-commands.sh --agent claude
 #   skills/agent-protocol/scripts/install-commands.sh --agent mastracode --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --agent mimocode --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent reasonix --scope user
 #   skills/agent-protocol/scripts/install-commands.sh --agent all --scope project
 
@@ -40,10 +41,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$AGENT" in
-  claude|mastracode|reasonix|all)
+  claude|mastracode|mimocode|reasonix|all)
     ;;
   *)
-    echo "error: --agent must be one of: claude, mastracode, reasonix, all" >&2
+    echo "error: --agent must be one of: claude, mastracode, mimocode, reasonix, all" >&2
     exit 1
     ;;
 esac
@@ -60,10 +61,12 @@ esac
 if [ "$SCOPE" = "project" ]; then
   CLAUDE_BASE=".claude"
   MASTRA_BASE=".mastracode"
+  MIMOCODE_BASE=".mimocode"
   REASONIX_BASE=".reasonix"
 else
   CLAUDE_BASE="$HOME/.claude"
   MASTRA_BASE="$HOME/.mastracode"
+  MIMOCODE_BASE="$HOME/.config/mimocode"
   REASONIX_BASE="$HOME/.config/reasonix"
 fi
 
@@ -121,6 +124,23 @@ install_mastracode() {
   done
 }
 
+install_mimocode() {
+  local base="$1"
+  local target_dir="$base/commands"
+  mkdir -p "$target_dir"
+  echo "  - MiMo Code -> $target_dir"
+  for obsolete in "$target_dir/ap:fix.md" "$target_dir/ap:clean.md"; do
+    if [ -e "$obsolete" ]; then
+      rm -f "$obsolete"
+      echo "    - $(basename "$obsolete") 已删除（废弃命令）"
+    fi
+  done
+  for src in "$SKILL_ROOT"/adapters/mimocode/commands/ap:*.md; do
+    local dest="$target_dir/$(basename "$src")"
+    sync_command_file "$src" "$dest"
+  done
+}
+
 install_reasonix() {
   local base="$1"
   local target_dir="$base/commands/ap"
@@ -147,6 +167,10 @@ fi
 
 if [ "$AGENT" = "mastracode" ] || [ "$AGENT" = "all" ]; then
   install_mastracode "$MASTRA_BASE"
+fi
+
+if [ "$AGENT" = "mimocode" ] || [ "$AGENT" = "all" ]; then
+  install_mimocode "$MIMOCODE_BASE"
 fi
 
 if [ "$AGENT" = "reasonix" ] || [ "$AGENT" = "all" ]; then

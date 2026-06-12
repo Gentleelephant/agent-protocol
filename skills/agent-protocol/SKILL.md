@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.30
+version: v3.31
 description: "Use only for explicit agent-protocol workflows: /ap:init, /ap:install, /ap:run, /ap:plan, /ap:review, /ap:import, /ap:execute, /ap:prune, /ap:reset, installing /ap commands, creating persistent agent handoff tasks/prompts, or Chinese requests that explicitly ask for agent-protocol handoff such as 按 agent-protocol, 自动完成并提交, 生成可执行任务, 生成交接 prompt, 导入执行 prompt, 执行已有 task. Do not use for ordinary code review, debugging, planning, implementation, or code explanation unless the user explicitly asks to create protocol tasks/artifacts or use /ap."
 ---
 

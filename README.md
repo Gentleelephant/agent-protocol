@@ -50,7 +50,7 @@
 初始化与安装命令：
 
 - `/ap:init`：初始化本地协议目录，不安装命令适配器
-- `/ap:install`：安装 Claude / Mastra Code / Reasonix 子命令
+- `/ap:install`：安装 Claude / Mastra Code / MiMo Code / Reasonix 子命令
 
 对 Claude Code，仓库现在额外提供了两个顶层 bootstrap skill：
 
@@ -219,7 +219,7 @@
 
 ### `/ap:install`
 
-输入：`--agent all|claude|mastracode|reasonix` 和 `--scope project|user`。
+输入：`--agent all|claude|mastracode|mimocode|reasonix` 和 `--scope project|user`。
 行为：只安装或刷新命令适配器，不初始化 `.agent-memory`，不创建 task。
 刷新规则：对本协议管理的命令文件，如果目标文件不存在则创建；如果已存在且内容不同则覆盖更新；如果内容相同则跳过写入。
 
@@ -378,7 +378,7 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 ## 安装子命令
 
-安装当前项目下的 Claude Code、Mastra Code 和 Reasonix 子命令：
+安装当前项目下的 Claude Code、Mastra Code、MiMo Code 和 Reasonix 子命令：
 
 ```bash
 bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
@@ -395,6 +395,19 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 ```bash
 bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mastracode
 ```
+
+只安装 MiMo Code：
+
+```bash
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mimocode
+```
+
+MiMo Code 自定义命令规则：
+
+- 项目级命令写入 `.mimocode/commands/ap:*.md`
+- 用户级命令写入 `~/.config/mimocode/commands/ap:*.md`
+- 文件名即命令名，例如 `ap:plan.md` 对应 `/ap:plan`
+- Markdown 文件正文就是 prompt 模板；需要参数的命令模板必须显式包含 `$ARGUMENTS`
 
 只安装 Reasonix：
 
@@ -419,9 +432,9 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 - 默认 `--agent all`
 - 默认 `--scope project`
-- `project` 会写入 `.claude/`、`.mastracode/` 和 `.reasonix/`
-- `user` 会写入 `~/.claude/`、`~/.mastracode/` 和 `~/.config/reasonix/`
-- 已存在的命令文件会跳过，不覆盖
+- `project` 会写入 `.claude/`、`.mastracode/`、`.mimocode/` 和 `.reasonix/`
+- `user` 会写入 `~/.claude/`、`~/.mastracode/`、`~/.config/mimocode/` 和 `~/.config/reasonix/`
+- 已存在的命令文件若内容不同会覆盖更新，内容相同则跳过
 - 已安装的旧 fix 命令文件会被删除
 - 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
 

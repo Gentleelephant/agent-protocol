@@ -1,7 +1,7 @@
 ---
 name: ap:install
 description: "Install or refresh agent-protocol command adapters only. Any agent."
-argument-hint: "[--agent all|claude|mastracode|reasonix] [--scope project|user]"
+argument-hint: "[--agent all|claude|mastracode|mimocode|reasonix] [--scope project|user]"
 ---
 
 # /ap:install
@@ -10,7 +10,7 @@ argument-hint: "[--agent all|claude|mastracode|reasonix] [--scope project|user]"
 
 ## 工作流
 
-1. 检测 `--agent`：`all`、`claude`、`mastracode`、`reasonix`，默认 `all`。
+1. 检测 `--agent`：`all`、`claude`、`mastracode`、`mimocode`、`reasonix`，默认 `all`。
 2. 检测 `--scope`：`project` 或 `user`，默认 `project`。
 3. 优先运行 `skills/agent-protocol/scripts/install-commands.sh`，传入相同参数。
 4. 对协议管理的命令文件：缺失则创建，内容不同则覆盖更新，内容相同则跳过写入。

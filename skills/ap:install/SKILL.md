@@ -1,8 +1,8 @@
 ---
 name: ap:install
-version: v3.30
+version: v3.31
 description: "Bootstrap agent-protocol command adapter installation for Claude Code. Installs or refreshes project/user /ap: subcommands only."
-argument-hint: "[--agent all|claude|mastracode|reasonix] [--scope project|user]"
+argument-hint: "[--agent all|claude|mastracode|mimocode|reasonix] [--scope project|user]"
 ---
 
 # /ap:install
@@ -27,6 +27,7 @@ exist.
 - No arguments: install all supported project-level command adapters.
 - `--agent claude`: install only Claude Code commands.
 - `--agent mastracode`: install only Mastra Code commands.
+- `--agent mimocode`: install only MiMo Code commands.
 - `--agent reasonix`: install only Reasonix commands.
 - `--agent all`: install all supported command sets.
 - `--scope project`: install into the current project.

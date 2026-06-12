@@ -1,12 +1,12 @@
 ---
-name: ap:install
-description: "Install or refresh agent-protocol command adapters only. Any agent."
-argument-hint: "[--agent all|claude|mastracode|mimocode|reasonix] [--scope project|user]"
+description: Install or refresh agent-protocol command adapters only. Any agent.
 ---
 
 # /ap:install
 
 安装或刷新命令适配器。此命令只复制命令文件并清理已废弃的旧 fix 入口，不初始化 `.agent-memory`，不创建 task，不修改业务代码。
+
+调用本命令时，把 `/ap:install` 后的参数文本视为安装参数：`$ARGUMENTS`。
 
 ## 工作流
 

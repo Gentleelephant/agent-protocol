@@ -10,7 +10,7 @@ This file contains command details that are intentionally kept out of `SKILL.md`
 - `/ap:import [prompt|prompt-artifact|plan-artifact|plan-document]`: normalize external handoff input into task/artifact state only. It must not implement product code.
 - `/ap:execute [task-id|next|--all] [--origin review|plan|import|run]`: claim and implement existing pending tasks only. Omitted target means `next`. `--origin` filters task source, not task type. There is no `--one` or `--loop`; use `task-id` or `next` for one task, and `--all` for safe serial batch execution. It must not create tasks or accept direct prompt/plan input.
 - `/ap:init`: initialize local protocol state only.
-- `/ap:install [--agent all|claude|mastracode|reasonix] [--scope project|user]`: install or refresh command adapters only.
+- `/ap:install [--agent all|claude|mastracode|mimocode|reasonix] [--scope project|user]`: install or refresh command adapters only.
 - `/ap:prune`: remove completed/cancelled history only.
 - `/ap:reset`: reset local `.agent-memory` state only.
 
@@ -50,7 +50,7 @@ Preserve existing `.agent-memory/tasks.json`. Create it as exactly `{"tasks": []
 
 Use this when the user asks only to install or refresh command adapters.
 
-1. Detect selected platform: explicit `claude`, `mastracode`, or `reasonix`; default `all`.
+1. Detect selected platform: explicit `claude`, `mastracode`, `mimocode`, or `reasonix`; default `all`.
 2. Detect scope: `user` or `global` means user-level install; default project-level install.
 3. Prefer `bash <skill-root>/scripts/install-commands.sh`, adding `--agent <name>` and `--scope user` when applicable.
 4. Managed command files should be created when missing, updated in place when contents differ, and skipped only when already up to date.
