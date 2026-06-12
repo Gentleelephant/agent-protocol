@@ -30,6 +30,7 @@ After init, the project should also contain local runtime script mirrors:
 .agent-memory/scripts/init.sh
 .agent-memory/scripts/install-commands.sh
 .agent-memory/scripts/prune.sh
+.agent-memory/adapters/
 ```
 
 Create missing project-local private files and skip existing files:
@@ -39,6 +40,7 @@ Create missing project-local private files and skip existing files:
 .agent-memory/tasks.json
 .agent-memory/artifacts/
 .agent-memory/scripts/
+.agent-memory/adapters/
 CLAUDE.local.md
 .mastracode/AGENTS.md
 ```

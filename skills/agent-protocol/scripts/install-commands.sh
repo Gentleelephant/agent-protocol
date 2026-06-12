@@ -17,9 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT_FROM_MEMORY="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd || true)"
 
 if [ -d "$SCRIPT_DIR/../adapters" ]; then
-  SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  ADAPTER_ROOT="$(cd "$SCRIPT_DIR/../adapters" && pwd)"
 elif [ -n "$REPO_ROOT_FROM_MEMORY" ] && [ -d "$REPO_ROOT_FROM_MEMORY/skills/agent-protocol/adapters" ]; then
-  SKILL_ROOT="$REPO_ROOT_FROM_MEMORY/skills/agent-protocol"
+  ADAPTER_ROOT="$REPO_ROOT_FROM_MEMORY/skills/agent-protocol/adapters"
 else
   echo "error: cannot locate agent-protocol adapters relative to $SCRIPT_DIR" >&2
   exit 1
@@ -113,7 +113,7 @@ install_claude() {
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
     fi
   done
-  for src in "$SKILL_ROOT"/adapters/claude/commands/ap:*.md; do
+  for src in "$ADAPTER_ROOT"/claude/commands/ap:*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done
@@ -130,7 +130,7 @@ install_cursor() {
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
     fi
   done
-  for src in "$SKILL_ROOT"/adapters/cursor/commands/*.md; do
+  for src in "$ADAPTER_ROOT"/cursor/commands/*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done
@@ -147,7 +147,7 @@ install_mastracode() {
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
     fi
   done
-  for src in "$SKILL_ROOT"/adapters/mastracode/commands/ap/*.md; do
+  for src in "$ADAPTER_ROOT"/mastracode/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done
@@ -164,7 +164,7 @@ install_mimocode() {
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
     fi
   done
-  for src in "$SKILL_ROOT"/adapters/mimocode/commands/ap:*.md; do
+  for src in "$ADAPTER_ROOT"/mimocode/commands/ap:*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done
@@ -181,7 +181,7 @@ install_reasonix() {
       echo "    - $(basename "$obsolete") 已删除（废弃命令）"
     fi
   done
-  for src in "$SKILL_ROOT"/adapters/reasonix/commands/ap/*.md; do
+  for src in "$ADAPTER_ROOT"/reasonix/commands/ap/*.md; do
     local dest="$target_dir/$(basename "$src")"
     sync_command_file "$src" "$dest"
   done

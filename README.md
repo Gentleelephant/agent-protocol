@@ -227,7 +227,7 @@
 
 输入：无。
 行为：保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact。
-实现：优先运行 `skills/agent-protocol/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
+实现：优先运行 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到仓库里的 `skills/agent-protocol/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
 
 ### `/ap:reset`
 
@@ -351,7 +351,7 @@
 /ap:init
 ```
 
-执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
+执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`、命令适配器模板镜像到 `.agent-memory/adapters/`。命令适配器安装必须单独执行 `/ap:install` 或安装脚本。
 
 Claude Code 入口规则：
 
@@ -360,6 +360,7 @@ Claude Code 入口规则：
 - 这两个入口只负责把 `/ap:init` 和 `/ap:install` 暴露给 Claude，并分别转发到主 `agent-protocol` skill 的 Init Workflow 和 Install Workflow
 - 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:install`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
 - 协议运行依赖脚本优先使用 `.agent-memory/scripts/`，不依赖 user scope 的脚本位置
+- install 所需的命令模板优先使用 `.agent-memory/adapters/`，避免在其他项目里找不到 `skills/agent-protocol/adapters/`
 
 脚本参数：
 
@@ -371,6 +372,7 @@ Claude Code 入口规则：
 - 已存在的文件会跳过
 - 已存在的 `.agent-memory/tasks.json` 会保留
 - `.agent-memory/scripts/init.sh`、`install-commands.sh`、`prune.sh` 会创建或更新
+- `.agent-memory/adapters/` 会同步当前协议支持的命令模板
 
 示例：
 

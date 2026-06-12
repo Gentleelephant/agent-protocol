@@ -62,6 +62,19 @@ sync_file() {
   fi
 }
 
+sync_dir() {
+  local src="$1"
+  local dest="$2"
+  local parent
+  parent="$(dirname "$dest")"
+  mkdir -p "$parent"
+
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  cp -R "$src"/. "$dest"/
+  echo "  - $dest 已同步"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
@@ -91,6 +104,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 - `.agent-memory/tasks.json`：任务索引和状态流转的唯一来源
 - `.agent-memory/artifacts/`：review、plan、prompt、done 等结果工件
 - `.agent-memory/scripts/`：项目本地协议脚本镜像，优先于 user scope 调用
+- `.agent-memory/adapters/`：项目本地命令适配器模板镜像，供 install 脚本离线使用
 - 读取状态优先看 task，读取细节优先看 artifact
 - artifact 只补充证据和历史，不反向修改 task 语义
 
@@ -160,10 +174,12 @@ ensure_dir ".agent-memory/artifacts/plan"
 ensure_dir ".agent-memory/artifacts/prompt"
 ensure_dir ".agent-memory/artifacts/done"
 ensure_dir ".agent-memory/scripts"
+ensure_dir ".agent-memory/adapters"
 write_file_if_missing ".agent-memory/agent-protocol.md" "$AGENT_PROTOCOL_CONTENT"
 sync_file "$SCRIPT_DIR/init.sh" ".agent-memory/scripts/init.sh"
 sync_file "$SCRIPT_DIR/install-commands.sh" ".agent-memory/scripts/install-commands.sh"
 sync_file "$SCRIPT_DIR/prune.sh" ".agent-memory/scripts/prune.sh"
+sync_dir "$SCRIPT_DIR/../adapters" ".agent-memory/adapters"
 
 if [ ! -f ".agent-memory/tasks.json" ]; then
   printf '{"tasks": []}\n' > .agent-memory/tasks.json
