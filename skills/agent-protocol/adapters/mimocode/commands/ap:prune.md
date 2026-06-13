@@ -8,8 +8,8 @@ description: Prune completed or cancelled agent-protocol history only. Any agent
 
 ## 工作流
 
-1. 默认运行 `bash .agent-memory/scripts/prune.sh`；如果用户明确要求彻底删除，则运行 `bash .agent-memory/scripts/prune.sh --hard`。
-2. 如果项目本地脚本不可用，再回退运行 `bash skills/agent-protocol/scripts/prune.sh` 或 `bash skills/agent-protocol/scripts/prune.sh --hard`。
+1. 先读取 `.agent-memory/source.json` 中的 `skill_root`，默认运行 `bash <skill_root>/scripts/prune.sh`；如果用户明确要求彻底删除，则运行 `bash <skill_root>/scripts/prune.sh --hard`。
+2. 如果 `source.json` 缺失或失效，再回退运行仓库里的 `bash skills/agent-protocol/scripts/prune.sh` 或 `bash skills/agent-protocol/scripts/prune.sh --hard`；旧项目兼容时才使用历史 `.agent-memory/scripts/prune.sh`。
 3. 如果脚本仍不可用，再按协议工作流执行等价清理。
 4. 默认模式下保留 `pending`、`in_progress`、`blocked` task。
 5. 默认模式下删除 `done`、`cancelled` task。

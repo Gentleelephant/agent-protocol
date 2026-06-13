@@ -1,6 +1,6 @@
 ---
 name: agent-protocol
-version: v3.50
+version: v3.52
 description: "Use only for explicit agent-protocol workflows. This is the single top-level command entrypoint and supports `/agent-protocol init` and `/agent-protocol install [--agent ...] [--scope ...]`. Installed /ap subcommands provide the actual command behavior."
 ---
 
@@ -28,8 +28,8 @@ Installed subcommand semantics come from the adapter command templates under `ad
 
 ## Bootstrap Actions
 
-- `/agent-protocol init`: run `scripts/init.sh` to initialize project-local protocol state only. Do not create tasks or install command adapters.
-- `/agent-protocol install [--agent ...] [--scope ...]`: run `.agent-memory/scripts/install-commands.sh` when present, otherwise `scripts/install-commands.sh`, to install or refresh command adapters only. Do not initialize `.agent-memory`, create tasks, or modify product code.
+- `/agent-protocol init`: run `scripts/init.sh --project --project-root <absolute-project-path>` to initialize project-local protocol state only. Do not create tasks or install command adapters.
+- `/agent-protocol install [--agent ...] [--scope ...]`: run the current skill's `scripts/install-commands.sh --project-root <absolute-project-path>`, using `.agent-memory/source.json` only as a project-local pointer back to this skill root when needed. Do not initialize `.agent-memory`, create tasks, or modify product code.
 
 ## Shared Protocol
 

@@ -2,15 +2,24 @@
 set -euo pipefail
 
 # 用法:
-#   skills/agent-protocol/scripts/init.sh --project
+#   skills/agent-protocol/scripts/init.sh --project --project-root /abs/path/to/project
 
 PROJECT_MODE=0
+PROJECT_ROOT=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --project)
       PROJECT_MODE=1
       shift
+      ;;
+    --project-root)
+      if [ "$#" -lt 2 ]; then
+        echo "error: --project-root requires a value" >&2
+        exit 1
+      fi
+      PROJECT_ROOT="$2"
+      shift 2
       ;;
     *)
       echo "error: unknown argument: $1" >&2
@@ -23,6 +32,18 @@ if [ "$PROJECT_MODE" -ne 1 ]; then
   echo "error: this script only initializes project-local personal config. Use --project." >&2
   exit 1
 fi
+
+if [ -z "$PROJECT_ROOT" ]; then
+  echo "error: --project-root is required" >&2
+  exit 1
+fi
+
+if [ ! -d "$PROJECT_ROOT" ]; then
+  echo "error: project root does not exist: $PROJECT_ROOT" >&2
+  exit 1
+fi
+
+PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
 
 ensure_dir() {
   local dir="$1"
@@ -45,37 +66,16 @@ write_file_if_missing() {
   fi
 }
 
-sync_file() {
-  local src="$1"
-  local dest="$2"
-  if [ ! -e "$dest" ]; then
-    cp "$src" "$dest"
-    echo "  - $dest 已创建"
-    return
-  fi
-
-  if cmp -s "$src" "$dest"; then
-    echo "  - $dest 已是最新，跳过写入"
-  else
-    cp "$src" "$dest"
-    echo "  - $dest 已更新"
-  fi
-}
-
-sync_dir() {
-  local src="$1"
-  local dest="$2"
-  local parent
-  parent="$(dirname "$dest")"
-  mkdir -p "$parent"
-
-  rm -rf "$dest"
-  mkdir -p "$dest"
-  cp -R "$src"/. "$dest"/
-  echo "  - $dest 已同步"
+write_file() {
+  local path="$1"
+  local content="$2"
+  printf "%s\n" "$content" > "$path"
+  echo "  - $path 已更新"
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SKILL_VERSION="v3.52"
 
 AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 # Agent 协作协议（项目级个人配置）
@@ -93,8 +93,8 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 ## 读取顺序
 
-1. 先读取当前项目下的 `.agent-memory/scripts/` 本地协议脚本（如存在）
-2. 再读取已安装的 `agent-protocol` skill
+1. 先读取已安装的 `agent-protocol` skill
+2. 再读取 `.agent-memory/source.json`，确认当前项目绑定的协议源码目录
 3. 再读取当前文件 `.agent-memory/agent-protocol.md`
 4. 当前项目任务状态读取 `.agent-memory/tasks.json`
 5. 详细结果工件读取 `.agent-memory/artifacts/`
@@ -103,8 +103,7 @@ AGENT_PROTOCOL_CONTENT=$(cat <<'EOF'
 
 - `.agent-memory/tasks.json`：任务索引和状态流转的唯一来源
 - `.agent-memory/artifacts/`：review、plan、prompt、done 等结果工件
-- `.agent-memory/scripts/`：项目本地协议脚本镜像，优先于 user scope 调用
-- `.agent-memory/adapters/`：项目本地命令适配器模板镜像，供 install 脚本离线使用
+- `.agent-memory/source.json`：当前项目绑定的协议源码目录和版本指针
 - 读取状态优先看 task，读取细节优先看 artifact
 - artifact 只补充证据和历史，不反向修改 task 语义
 
@@ -148,7 +147,7 @@ ENTRY_CONTENT=$(cat <<'EOF'
 这是当前项目的个人私有配置入口，不需要提交到团队仓库。
 
 请先读取已安装的 `agent-protocol` skill，再读取 `.agent-memory/agent-protocol.md`。
-如果 `.agent-memory/scripts/` 存在，优先使用其中的项目本地脚本，而不是 user scope 脚本。
+如需执行协议脚本，优先根据 `.agent-memory/source.json` 定位当前项目绑定的 skill 源码目录。
 
 默认行为：
 
@@ -169,6 +168,8 @@ EOF
 
 echo "✓ 项目级个人配置初始化"
 
+cd "$PROJECT_ROOT"
+
 ensure_dir ".agent-memory"
 ensure_dir ".agent-memory/artifacts"
 ensure_dir ".agent-memory/artifacts/run"
@@ -176,13 +177,14 @@ ensure_dir ".agent-memory/artifacts/review"
 ensure_dir ".agent-memory/artifacts/plan"
 ensure_dir ".agent-memory/artifacts/prompt"
 ensure_dir ".agent-memory/artifacts/done"
-ensure_dir ".agent-memory/scripts"
-ensure_dir ".agent-memory/adapters"
 write_file_if_missing ".agent-memory/agent-protocol.md" "$AGENT_PROTOCOL_CONTENT"
-sync_file "$SCRIPT_DIR/init.sh" ".agent-memory/scripts/init.sh"
-sync_file "$SCRIPT_DIR/install-commands.sh" ".agent-memory/scripts/install-commands.sh"
-sync_file "$SCRIPT_DIR/prune.sh" ".agent-memory/scripts/prune.sh"
-sync_dir "$SCRIPT_DIR/../adapters" ".agent-memory/adapters"
+write_file ".agent-memory/source.json" "$(cat <<EOF
+{
+  "skill_root": "$SKILL_ROOT",
+  "version": "$SKILL_VERSION"
+}
+EOF
+)"
 
 if [ ! -f ".agent-memory/tasks.json" ]; then
   printf '{"tasks": []}\n' > .agent-memory/tasks.json

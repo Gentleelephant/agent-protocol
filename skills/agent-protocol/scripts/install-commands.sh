@@ -2,28 +2,75 @@
 set -euo pipefail
 
 # 用法:
-#   skills/agent-protocol/scripts/install-commands.sh
-#   skills/agent-protocol/scripts/install-commands.sh --agent claude
-#   skills/agent-protocol/scripts/install-commands.sh --agent cursor --scope user
-#   skills/agent-protocol/scripts/install-commands.sh --agent mastracode --scope user
-#   skills/agent-protocol/scripts/install-commands.sh --agent mimocode --scope user
-#   skills/agent-protocol/scripts/install-commands.sh --agent reasonix --scope user
-#   skills/agent-protocol/scripts/install-commands.sh --agent all --scope project
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent claude
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent cursor --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent mastracode --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent mimocode --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent reasonix --scope user
+#   skills/agent-protocol/scripts/install-commands.sh --project-root /abs/path/to/project --agent all --scope project
 
 AGENT="all"
 SCOPE="project"
+PROJECT_ROOT=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT_FROM_MEMORY="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd || true)"
 
-if [ -d "$SCRIPT_DIR/../adapters" ]; then
-  ADAPTER_ROOT="$(cd "$SCRIPT_DIR/../adapters" && pwd)"
-elif [ -n "$REPO_ROOT_FROM_MEMORY" ] && [ -d "$REPO_ROOT_FROM_MEMORY/skills/agent-protocol/adapters" ]; then
-  ADAPTER_ROOT="$REPO_ROOT_FROM_MEMORY/skills/agent-protocol/adapters"
-else
-  echo "error: cannot locate agent-protocol adapters relative to $SCRIPT_DIR" >&2
+read_skill_root_from_source() {
+  local source_path="$1"
+  if [ ! -f "$source_path" ]; then
+    return 1
+  fi
+
+  python3 - "$source_path" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as handle:
+    data = json.load(handle)
+value = data.get("skill_root")
+if not isinstance(value, str) or not value:
+    raise SystemExit(1)
+print(value)
+PY
+}
+
+resolve_skill_root() {
+  local candidate
+  local project_root="$1"
+  local source_path="$project_root/.agent-memory/source.json"
+
+  candidate="$(cd "$SCRIPT_DIR/.." && pwd)"
+  if [ -f "$candidate/SKILL.md" ] && [ -d "$candidate/adapters" ]; then
+    printf "%s\n" "$candidate"
+    return
+  fi
+
+  if candidate="$(read_skill_root_from_source "$source_path" 2>/dev/null)"; then
+    if [ -f "$candidate/SKILL.md" ] && [ -d "$candidate/adapters" ]; then
+      printf "%s\n" "$candidate"
+      return
+    fi
+    echo "error: invalid skill_root in $source_path: $candidate" >&2
+    exit 1
+  fi
+
+  candidate="$project_root/skills/agent-protocol"
+  if [ -f "$candidate/SKILL.md" ] && [ -d "$candidate/adapters" ]; then
+    printf "%s\n" "$candidate"
+    return
+  fi
+
+  candidate="$SCRIPT_DIR/../adapters"
+  if [ -d "$candidate" ]; then
+    cd "$candidate/.." && pwd
+    return
+  fi
+
+  echo "error: cannot locate agent-protocol skill root. Run init to create .agent-memory/source.json or invoke this script from the repository copy." >&2
   exit 1
-fi
+}
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -43,12 +90,34 @@ while [ "$#" -gt 0 ]; do
       SCOPE="$2"
       shift 2
       ;;
+    --project-root)
+      if [ "$#" -lt 2 ]; then
+        echo "error: --project-root requires a value" >&2
+        exit 1
+      fi
+      PROJECT_ROOT="$2"
+      shift 2
+      ;;
     *)
       echo "error: unknown argument: $1" >&2
       exit 1
       ;;
   esac
 done
+
+if [ -z "$PROJECT_ROOT" ]; then
+  echo "error: --project-root is required" >&2
+  exit 1
+fi
+
+if [ ! -d "$PROJECT_ROOT" ]; then
+  echo "error: project root does not exist: $PROJECT_ROOT" >&2
+  exit 1
+fi
+
+PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+SKILL_ROOT="$(resolve_skill_root "$PROJECT_ROOT")"
+ADAPTER_ROOT="$SKILL_ROOT/adapters"
 
 case "$AGENT" in
   claude|cursor|mastracode|mimocode|reasonix|all)
@@ -69,11 +138,11 @@ case "$SCOPE" in
 esac
 
 if [ "$SCOPE" = "project" ]; then
-  CLAUDE_BASE=".claude"
-  CURSOR_BASE=".cursor"
-  MASTRA_BASE=".mastracode"
-  MIMOCODE_BASE=".mimocode"
-  REASONIX_BASE=".reasonix"
+  CLAUDE_BASE="$PROJECT_ROOT/.claude"
+  CURSOR_BASE="$PROJECT_ROOT/.cursor"
+  MASTRA_BASE="$PROJECT_ROOT/.mastracode"
+  MIMOCODE_BASE="$PROJECT_ROOT/.mimocode"
+  REASONIX_BASE="$PROJECT_ROOT/.reasonix"
 else
   CLAUDE_BASE="$HOME/.claude"
   CURSOR_BASE="$HOME/.cursor"
@@ -189,6 +258,8 @@ install_reasonix() {
 
 echo "✓ agent-protocol 子命令已安装"
 echo "  - scope: $SCOPE"
+echo "  - project root: $PROJECT_ROOT"
+echo "  - skill root: $SKILL_ROOT"
 
 if [ "$AGENT" = "claude" ] || [ "$AGENT" = "all" ]; then
   install_claude "$CLAUDE_BASE"

@@ -51,7 +51,7 @@
 初始化与安装入口：
 
 - `/agent-protocol init`：初始化本地协议目录，不安装命令适配器
-- `/agent-protocol install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器；协议脚本优先使用项目下 `.agent-memory/scripts/`
+- `/agent-protocol install`：安装 Claude / Cursor / Mastra Code / MiMo Code / Reasonix 命令适配器；协议脚本优先使用当前 skill 源码目录，项目仅保存 `source.json` 指针
 
 执行方式说明：
 
@@ -239,13 +239,13 @@
 - 确定性脚本：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project --project-root /absolute/path/to/project
 ```
 
 参数兼容：
 
 - 顶层命令本身不要求业务参数
-- 底层脚本参数保持不变，继续使用 `--project`
+- 底层脚本需要 `--project --project-root /absolute/path/to/project`
 
 ### `/agent-protocol install`
 
@@ -260,11 +260,12 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 - 确定性脚本：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project
 ```
 
 参数兼容：
 
+- `--project-root /absolute/path/to/project`
 - `--agent all|claude|cursor|mastracode|mimocode|reasonix`
 - `--scope project|user`
 - 与之前的安装脚本参数保持一致
@@ -273,7 +274,7 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 
 输入：无，或 `--hard`。
 行为：默认保留活动 task，删除 `done` / `cancelled` task 和仅被这些终态 task 引用的历史 artifact；传入 `--hard` 时直接删除整个 `.agent-memory/` 目录。
-实现：优先运行 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到仓库里的 `skills/agent-protocol/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
+实现：优先根据 `.agent-memory/source.json` 定位当前项目绑定的 `skills/agent-protocol/scripts/prune.sh`；旧项目兼容场景才回退到历史 `.agent-memory/scripts/prune.sh`，而不是由不同 agent 各自手写清理逻辑。
 
 ### `/ap:reset`
 
@@ -397,32 +398,32 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 /agent-protocol init
 ```
 
-执行后只初始化 `.agent-memory/` 本地状态，并同步项目本地脚本镜像到 `.agent-memory/scripts/`、命令适配器模板镜像到 `.agent-memory/adapters/`。命令适配器安装必须单独执行 `/agent-protocol install` 或安装脚本。
+执行后只初始化 `.agent-memory/` 本地状态，并写入 `.agent-memory/source.json` 指向当前协议 skill 源码目录。命令适配器安装必须单独执行 `/agent-protocol install` 或安装脚本。
 
 Claude Code 入口规则：
 
 - `skills/agent-protocol/SKILL.md` 是唯一顶层 skill 入口
 - 它直接承载 `/agent-protocol init` 和 `/agent-protocol install ...` 的顶层命令说明
 - 其他 `/ap:run`、`/ap:plan`、`/ap:review`、`/ap:import`、`/ap:execute`、`/ap:prune`、`/ap:reset` 通过 `install-commands.sh` 安装到项目目录或用户目录
-- 协议运行依赖脚本优先使用 `.agent-memory/scripts/`，不依赖 user scope 的脚本位置
-- install 所需的命令模板优先使用 `.agent-memory/adapters/`，避免在其他项目里找不到 `skills/agent-protocol/adapters/`
+- 协议运行依赖脚本优先使用当前 skill 源码目录，项目本地只保留 `source.json` 作为定位指针
+- install 所需的命令模板优先使用当前 skill 源码目录下的 `adapters/`，避免项目内镜像过期
 
 脚本参数：
 
 - `--project`：必填
+- `--project-root /absolute/path/to/project`：必填
 
 幂等规则：
 
 - 已存在的目录会跳过
 - 已存在的文件会跳过
 - 已存在的 `.agent-memory/tasks.json` 会保留
-- `.agent-memory/scripts/init.sh`、`install-commands.sh`、`prune.sh` 会创建或更新
-- `.agent-memory/adapters/` 会同步当前协议支持的命令模板
+- `.agent-memory/source.json` 会创建或更新，记录当前项目绑定的 skill 源码目录和版本
 
 示例：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/init.sh --project --project-root /absolute/path/to/project
 ```
 
 ## 安装子命令
@@ -430,19 +431,19 @@ bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/sk
 安装当前项目下的 Claude Code、Cursor、Mastra Code、MiMo Code 和 Reasonix 命令适配器：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project
 ```
 
 只安装 Claude Code：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent claude
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --agent claude
 ```
 
 只安装 Cursor：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent cursor
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --agent cursor
 ```
 
 Cursor 自定义命令规则：
@@ -455,13 +456,13 @@ Cursor 自定义命令规则：
 只安装 Mastra Code：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mastracode
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --agent mastracode
 ```
 
 只安装 MiMo Code：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent mimocode
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --agent mimocode
 ```
 
 MiMo Code 自定义命令规则：
@@ -474,7 +475,7 @@ MiMo Code 自定义命令规则：
 只安装 Reasonix：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --agent reasonix
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --agent reasonix
 ```
 
 Reasonix 自定义命令规则：
@@ -487,20 +488,21 @@ Reasonix 自定义命令规则：
 安装到用户级目录而不是项目目录：
 
 ```bash
-bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --scope user
+bash /Users/zhangpeng/GolandProjects/github.com/Gentleelephant/agent-protocol/skills/agent-protocol/scripts/install-commands.sh --project-root /absolute/path/to/project --scope user
 ```
 
 规则：
 
 - 默认 `--agent all`
 - 默认 `--scope project`
+- `--project-root` 为必填，agent 调用时必须传目标项目绝对路径
 - `project` 会写入 `.claude/`、`.cursor/`、`.mastracode/`、`.mimocode/` 和 `.reasonix/`
 - `user` 会写入 `~/.claude/`、`~/.cursor/`、`~/.mastracode/`、`~/.config/mimocode/` 和 `~/.config/reasonix/`
 - 已存在的命令文件若内容不同会覆盖更新，内容相同则跳过
 - 已安装的旧 fix 命令文件会被删除
 - 这个安装动作只复制命令文件，不会重新初始化 `.agent-memory/`
-- 如果由 agent 触发安装，不应直接执行 `./skills/agent-protocol/scripts/install-commands.sh`；必须先定位仓库根目录，再执行 `<repo-root>/skills/agent-protocol/scripts/install-commands.sh`
-- 如果 `.agent-memory/scripts/install-commands.sh` 已存在，应优先执行该项目本地脚本，而不是依赖 user scope 脚本位置
+- 如果由 agent 触发安装，不应直接执行 `./skills/agent-protocol/scripts/install-commands.sh`；必须先定位仓库根目录，再执行 `<repo-root>/skills/agent-protocol/scripts/install-commands.sh --project-root <absolute-project-path>`
+- 如果项目已初始化，应优先读取 `.agent-memory/source.json`，再执行其中指向的 `<skill-root>/scripts/install-commands.sh`
 
 ## 说明
 

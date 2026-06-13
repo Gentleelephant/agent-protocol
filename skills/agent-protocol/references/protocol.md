@@ -220,7 +220,7 @@ pending|blocked|in_progress → cancelled
 - `/ap:run` 在主 agent 完成最终验证后，必须执行一次明确的 git 收尾：检查 `git status`、只暂存本次 run 应提交的改动、创建主 agent commit、记录 commit 结果，并在需要时再 push；如果没有成功创建 commit，则 run 只能报告为未完成或 blocked，不能当作成功结束
 - `/ap:run` 默认串行处理 task，不并行，不让子 agent 直接提交 git 历史
 - `/agent-protocol install` 应刷新协议管理的命令文件：缺失则创建，内容变化则覆盖更新，内容一致才跳过
-- `/ap:prune` 应优先复用项目本地确定性脚本 `.agent-memory/scripts/prune.sh`；项目本地脚本不可用时再回退到 `skills/agent-protocol/scripts/prune.sh`，避免不同 agent 各自实现不同的清理口径
+- `/ap:prune` 应优先根据 `.agent-memory/source.json` 定位当前项目绑定的 `skills/agent-protocol/scripts/prune.sh`；只有旧项目兼容时才回退到历史 `.agent-memory/scripts/prune.sh`
 - 追加任务，不覆盖整个文件
 - 项目级个人配置不提交到团队仓库
 
